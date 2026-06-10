@@ -71,20 +71,20 @@ const CATEGORIAS = [
 //   base · licor-dulce · vermut · aperitivo · espumoso · dulce · acido ·
 //   zumo · pure · textura · alargador · bitter · aroma
 const TIPOS_INGREDIENTE = [
-  // Destilados
-  { id: "tequila",         nombre: "Tequila",                cat: "Destilados", sub: "Agave",          rol: "base" },
-  { id: "mezcal",          nombre: "Mezcal",                 cat: "Destilados", sub: "Agave",          rol: "base" },
-  { id: "ron-blanco",      nombre: "Ron blanco",             cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
-  { id: "ron-oscuro",      nombre: "Ron oscuro / añejo",     cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
-  { id: "ron-especiado",   nombre: "Ron especiado",          cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
-  { id: "cachaca",         nombre: "Cachaça",                cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
-  { id: "vodka",           nombre: "Vodka",                  cat: "Destilados", sub: "Grano",          rol: "base" },
-  { id: "bourbon",         nombre: "Whisky bourbon",         cat: "Destilados", sub: "Grano",          rol: "base" },
-  { id: "whisky-centeno",  nombre: "Whisky de centeno (rye)",cat: "Destilados", sub: "Grano",          rol: "base" },
-  { id: "whisky-escoces",  nombre: "Whisky escocés",         cat: "Destilados", sub: "Grano",          rol: "base" },
-  { id: "ginebra",         nombre: "Ginebra",                cat: "Destilados", sub: "Botánicos",      rol: "base" },
-  { id: "brandy",          nombre: "Brandy / Coñac",         cat: "Destilados", sub: "Uva",            rol: "base" },
-  { id: "pisco",           nombre: "Pisco",                  cat: "Destilados", sub: "Uva",            rol: "base" },
+  // Destilados — la subcategoría es el nombre de cada licor, tal como se pide en barra
+  { id: "ron-blanco",      nombre: "Ron blanco",             cat: "Destilados", sub: "Ron",            rol: "base" },
+  { id: "ron-oscuro",      nombre: "Ron oscuro / añejo",     cat: "Destilados", sub: "Ron",            rol: "base" },
+  { id: "ron-especiado",   nombre: "Ron especiado",          cat: "Destilados", sub: "Ron",            rol: "base" },
+  { id: "bourbon",         nombre: "Whisky bourbon",         cat: "Destilados", sub: "Whisky",         rol: "base" },
+  { id: "whisky-centeno",  nombre: "Whisky de centeno (rye)",cat: "Destilados", sub: "Whisky",         rol: "base" },
+  { id: "whisky-escoces",  nombre: "Whisky escocés",         cat: "Destilados", sub: "Whisky",         rol: "base" },
+  { id: "vodka",           nombre: "Vodka",                  cat: "Destilados", sub: "Vodka",          rol: "base" },
+  { id: "tequila",         nombre: "Tequila",                cat: "Destilados", sub: "Tequila",        rol: "base" },
+  { id: "mezcal",          nombre: "Mezcal",                 cat: "Destilados", sub: "Mezcal",         rol: "base" },
+  { id: "ginebra",         nombre: "Ginebra",                cat: "Destilados", sub: "Ginebra",        rol: "base" },
+  { id: "brandy",          nombre: "Brandy / Coñac",         cat: "Destilados", sub: "Brandy",         rol: "base" },
+  { id: "pisco",           nombre: "Pisco",                  cat: "Destilados", sub: "Pisco",          rol: "base" },
+  { id: "cachaca",         nombre: "Cachaça",                cat: "Destilados", sub: "Cachaça",        rol: "base" },
   // Licores
   { id: "triple-sec",      nombre: "Triple sec / Curaçao naranja", cat: "Licores", sub: "Licores de fruta", rol: "licor-dulce" },
   { id: "blue-curacao",    nombre: "Blue curaçao",           cat: "Licores", sub: "Licores de fruta",   rol: "licor-dulce" },

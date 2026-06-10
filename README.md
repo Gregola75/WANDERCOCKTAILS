@@ -24,7 +24,7 @@ WanderCocktails parte de un **recetario de referencia con proporciones verificad
 
 ### 🧾 Inventario y costes
 - Registro de licores, siropes, zumos y concentrados con precio de compra y contenido → coste por ml.
-- **Taxonomía profesional** en dos niveles: 7 categorías (🥃 Destilados, 🍷 Licores, 🍯 Siropes, 🍋 Zumos, 🥭 Concentrados, 🫧 Refrescos, 🌿 Frescos) con subcategorías (Agave, Caña de azúcar, Grano, Botánicos, Vermuts, Aperitivos amargos, Purés de fruta…).
+- **Taxonomía en dos niveles**: 7 categorías (🥃 Destilados, 🍷 Licores, 🍯 Siropes, 🍋 Zumos, 🥭 Concentrados, 🫧 Refrescos, 🌿 Frescos) con subcategorías con los nombres de barra de toda la vida: en Destilados aparecen directamente **Ron, Whisky, Vodka, Tequila, Mezcal, Ginebra, Brandy, Pisco y Cachaça** (y dentro, sus variantes: ron blanco/oscuro/especiado, bourbon/centeno/escocés…); en Licores, los de fruta, dulces, vermuts, aperitivos amargos y espumosos.
 - Lista agrupada por categoría con filtros tipo chip, valor de stock por categoría y coste unitario por 100 ml.
 - Cada receta muestra su **coste de producción real** ya escalado, el **precio de venta sugerido** (coste × margen configurable) y el % de coste sobre PVP.
 
