@@ -189,11 +189,13 @@ function cambiarSeccion(id) {
 }
 
 // Opciones <select> de tipos agrupadas por categoría · subcategoría
+// (con el origen del destilado entre paréntesis, para formar al personal)
 function opcionesTiposHtml(soloCat) {
   const tipos = TIPOS_INGREDIENTE.filter(t => !soloCat || t.cat === soloCat);
   let grupo = "", html = "";
   tipos.forEach(t => {
-    const g = t.cat + " · " + t.sub;
+    const origen = SUB_ORIGEN[t.sub] ? ` — ${SUB_ORIGEN[t.sub]}` : "";
+    const g = t.cat + " · " + t.sub + origen;
     if (g !== grupo) {
       if (grupo) html += "</optgroup>";
       html += `<optgroup label="${esc(g)}">`;
@@ -345,7 +347,7 @@ function renderInventario() {
         const cu = item.precio && item.cantidad ? item.precio / item.cantidad : 0;
         return `<tr>
           <td><b>${esc(item.nombre)}</b></td>
-          <td><span class="tag">${esc(t.sub)}</span> <span class="tag tag-oro">${esc(t.nombre)}</span></td>
+          <td><span class="tag" ${SUB_ORIGEN[t.sub] ? `title="Origen: ${esc(SUB_ORIGEN[t.sub])}"` : ""}>${esc(t.sub)}${SUB_ORIGEN[t.sub] ? ` · ${esc(SUB_ORIGEN[t.sub])}` : ""}</span> <span class="tag tag-oro">${esc(t.nombre)}</span></td>
           <td class="num">${fmtDinero(item.precio)}</td>
           <td class="num">${item.cantidad} ${item.unidad}</td>
           <td class="num">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
@@ -391,6 +393,121 @@ function agregarInventario(ev) {
   renderInventario();
 }
 
+// ---------- Indicador de sabor y método (reglas de oro) ----------
+// Perfil del cóctel ya escalado y diluido: graduación, dulzor y acidez finales.
+function perfilSabor(escalada) {
+  let alcohol = 0, azucar = 0, acido = 0, gas = false, turbio = false, amargo = false, cremoso = false;
+  escalada.ingredientes.forEach(i => {
+    const p = PERFIL_TIPO[i.tipo] || {};
+    const ml = i.mlFinal || 0;
+    alcohol += ml * (p.abv || 0);
+    azucar += ml * (p.azucar || 0);
+    acido += ml * (p.acido || 0);
+    if (p.gas) gas = true;
+    if (p.turbio) turbio = true;
+    if (p.amargo) amargo = true;
+    if (p.cremoso) cremoso = true;
+  });
+  const vol = escalada.volFinal || 1;
+  return {
+    abv: alcohol / vol * 100,      // % alcohol en el vaso
+    dulzor: azucar / vol * 100,    // g de azúcar por 100 ml
+    acidez: acido / vol * 100,     // g de ácido por 100 ml
+    gas, turbio, amargo, cremoso,
+  };
+}
+
+function etiquetaFuerza(abv) {
+  if (abv < 5) return "Sin apenas alcohol";
+  if (abv < 9) return "Suave";
+  if (abv < 15) return "Ligero";
+  if (abv < 22) return "Clásico";
+  if (abv < 30) return "Fuerte";
+  return "Muy fuerte";
+}
+
+// Veredicto de equilibrio según la regla de oro: el dulce se compensa
+// con ácido, amargor o burbuja; si nada lo compensa, avisa.
+function veredictoSabor(p) {
+  if (p.acidez >= 0.15) {
+    const ratio = p.dulzor / p.acidez;
+    if (ratio < 3.5) return { clase: "tag-mal", texto: "⚠ Ácido dominante: sube el dulce o baja el cítrico (busca la 2:1:1)" };
+    if (ratio < 6) return { clase: "tag-ok", texto: "✓ Cítrico y fresco: ácido marcado (perfil margarita / daiquiri)" };
+    if (ratio <= 13) return { clase: "tag-ok", texto: "✓ Equilibrado dulce-ácido (cumple la regla de oro)" };
+  }
+  // Sin ácido que compense (o con muy poco)
+  if (p.dulzor < 1.5) return { clase: "tag-ok", texto: "✓ Seco y espirituoso (estilo martini / ancestral)" };
+  if (p.amargo && p.dulzor <= 12) return { clase: "tag-ok", texto: "✓ Agridulce: el amargor compensa el dulzor (perfil aperitivo)" };
+  if (p.cremoso && p.dulzor <= 12) return { clase: "tag-ok", texto: "✓ Cremoso y goloso (perfil tropical / postre)" };
+  if (p.gas && p.dulzor <= 11) return { clase: "tag-ok", texto: "✓ Refrescante y dulce (perfil combinado)" };
+  if (p.dulzor <= 6) return { clase: "tag-ok", texto: "✓ Semiseco: dulzor sutil sobre la base" };
+  if (p.dulzor <= 11) return { clase: "tag", texto: "Perfil dulce y afrutado: un toque de cítrico lo equilibraría aún más" };
+  return { clase: "tag-mal", texto: "⚠ Muy dulce y sin ácido ni amargor que lo compense" };
+}
+
+// Regla de oro del método: lo turbio se agita, lo transparente se remueve,
+// la burbuja nunca se agita.
+function metodoRecomendado(perfil) {
+  if (perfil.gas) return {
+    id: "directo",
+    razon: perfil.turbio
+      ? "lleva burbuja: agita el resto sin el gas y corónalo al final en el vaso"
+      : "lleva burbuja: constrúyelo directo en el vaso, el gas nunca se agita",
+  };
+  if (perfil.turbio) return {
+    id: "agitado",
+    razon: "lleva zumo, puré, huevo o lácteo: lo turbio siempre se agita (12-15 s)",
+  };
+  return {
+    id: "removido",
+    razon: "solo alcoholes limpios: lo transparente se remueve, nunca se agita",
+  };
+}
+
+function barraSabor(label, valor, max, clase, textoValor) {
+  const pct = Math.max(2, Math.min(100, valor / max * 100));
+  return `
+    <div class="sabor-fila">
+      <span class="sabor-label">${label}</span>
+      <div class="sabor-track"><div class="sabor-fill ${clase}" style="width:${pct}%"></div></div>
+      <span class="sabor-val">${textoValor}</span>
+    </div>`;
+}
+
+// Estos ingredientes exigen agitado sí o sí (emulsionan o son densos)
+const NECESITAN_SHAKE = new Set([
+  "clara-huevo", "nata", "crema-coco", "miel", "orgeat", "espresso",
+  "pure-fresa", "pure-maracuya", "pure-mango",
+]);
+
+function panelSabor(receta, escalada) {
+  const p = perfilSabor(escalada);
+  const v = veredictoSabor(p);
+  const m = metodoRecomendado(p);
+  // El batido es un agitado con hielo dentro: lo damos por bueno si tocaba agitar
+  const coincide = receta.tecnica === m.id || (receta.tecnica === "batido" && m.id === "agitado");
+  // Excepción de barra: zumos construidos sobre hielo (macerados, combinados)
+  // valen en directo si no llevan nada que exija emulsión.
+  const construidoValido = !coincide && m.id === "agitado" && receta.tecnica === "directo" &&
+    receta.hielo !== "sin-hielo" && !receta.ingredientes.some(i => NECESITAN_SHAKE.has(i.tipo));
+  let metodoHtml;
+  if (coincide) {
+    metodoHtml = `<span class="tag tag-ok">✓ Método correcto: ${esc(tecnicaPorId(receta.tecnica).nombre)} — ${esc(m.razon)}</span>`;
+  } else if (construidoValido) {
+    metodoHtml = `<span class="tag tag-ok">✓ Construido sobre hielo vale (estilo macerado / combinado); un agitado rápido lo integraría aún más</span>`;
+  } else {
+    metodoHtml = `<span class="tag tag-mal">💡 Mejor ${esc(tecnicaPorId(m.id).nombre.toLowerCase())}: ${esc(m.razon)}</span>`;
+  }
+  return `
+    <div class="sabor-panel">
+      ${barraSabor("Fuerza", p.abv, 30, "f-fuerza", p.abv.toFixed(0) + "% · " + etiquetaFuerza(p.abv))}
+      ${barraSabor("Dulzor", p.dulzor, 15, "f-dulzor", p.dulzor.toFixed(1) + " g/100ml")}
+      ${barraSabor("Acidez", p.acidez, 1.5, "f-acidez", p.acidez.toFixed(2) + " g/100ml")}
+      <div><span class="tag ${v.clase}">${v.texto}</span></div>
+      <div>${metodoHtml}</div>
+    </div>`;
+}
+
 // ---------- Recetas ----------
 function tarjetaReceta(receta, opciones = {}) {
   const e = escalarReceta(receta);
@@ -427,6 +544,7 @@ function tarjetaReceta(receta, opciones = {}) {
       </div>
       ${avisos}
       <div>${lineas}</div>
+      ${panelSabor(receta, e)}
       <p class="meta">
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
         ${e.despPct ? `+ hielo (vaso lleno al ${estado.llenadoPct} %)` : `(${estado.llenadoPct} % del vaso)`}
@@ -819,6 +937,14 @@ document.addEventListener("DOMContentLoaded", () => {
     activarBotonesQuitar();
   });
   $("#btn-preview").addEventListener("click", vistaPrevia);
+  // Vista previa en vivo: el indicador de sabor se actualiza mientras escribes
+  let temporizadorPreview = null;
+  $("#form-receta").addEventListener("input", () => {
+    clearTimeout(temporizadorPreview);
+    temporizadorPreview = setTimeout(() => {
+      if (leerIngredientesFormulario().some(i => i.ml)) vistaPrevia();
+    }, 400);
+  });
   $("#btn-sorprendeme").addEventListener("click", () => mostrarPropuesta("azar"));
   $("#filtro-recetas").addEventListener("input", renderRecetas);
   $("#filtro-posibles").addEventListener("change", renderRecetas);

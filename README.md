@@ -28,6 +28,17 @@ WanderCocktails parte de un **recetario de referencia con proporciones verificad
 - Lista agrupada por categoría con filtros tipo chip, valor de stock por categoría y coste unitario por 100 ml.
 - Cada receta muestra su **coste de producción real** ya escalado, el **precio de venta sugerido** (coste × margen configurable) y el % de coste sobre PVP.
 
+### 🎚️ Indicador de sabor y método (en cada receta)
+Cada cóctel — clásico, propio o en el editor mientras lo escribes — muestra su **perfil de sabor calculado** sobre el volumen final (ya escalado y diluido):
+
+- **Fuerza**: % de alcohol en el vaso (suave → muy fuerte)
+- **Dulzor**: gramos de azúcar por 100 ml
+- **Acidez**: gramos de ácido por 100 ml
+
+Con un **veredicto de equilibrio** según la regla de oro: equilibrado ✓, cítrico y fresco ✓ (perfil margarita), agridulce ✓ (el amargor compensa), cremoso tropical ✓, seco espirituoso ✓… o aviso ⚠ si domina el ácido o el dulce, con la corrección sugerida.
+
+Y la **recomendación de método** de elaboración: *lo turbio se agita, lo transparente se remueve y la burbuja nunca se agita*. Si la técnica elegida no es la idónea, la app sugiere la correcta (con la excepción de barra: macerados y combinados construidos sobre hielo). En «Crear receta» el indicador se actualiza **en vivo** mientras escribes las medidas.
+
 ### 🧪 Inventar — el asistente con las reglas de oro
 Cada tipo de ingrediente tiene asignado un **rol coctelero** (base alcohólica, dulce, ácido, alargador, textura, bitter, aperitivo, espumoso…). Sobre esos roles, el asistente aplica las **8 fórmulas de equilibrio** con las que trabajan los bartenders profesionales:
 

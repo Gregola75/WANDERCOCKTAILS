@@ -227,6 +227,31 @@ td.num, th.num { text-align: right; }
 #zona-propuesta { margin-bottom: 8px; }
 #zona-propuesta h3 { color: var(--gold-2); }
 
+/* Indicador de sabor */
+.sabor-panel {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sabor-fila { display: flex; align-items: center; gap: 8px; }
+.sabor-label { width: 52px; font-size: .74rem; color: var(--text-2); flex-shrink: 0; }
+.sabor-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.sabor-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.sabor-fill.f-fuerza { background: linear-gradient(90deg, #d9a441, #e07a5f); }
+.sabor-fill.f-dulzor { background: linear-gradient(90deg, #c98c3a, #f0c36b); }
+.sabor-fill.f-acidez { background: linear-gradient(90deg, #7fbf73, #cfe07a); }
+.sabor-val { font-size: .72rem; color: var(--text-2); width: 118px; flex-shrink: 0; text-align: right; }
+
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
   nav { overflow-x: auto; flex-wrap: nowrap; }

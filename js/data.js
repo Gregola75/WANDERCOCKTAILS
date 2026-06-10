@@ -458,3 +458,62 @@ const RECETAS_CLASICAS = [
 ];
 
 const ML_POR_DASH = 0.9; // 1 dash ≈ 0,9 ml
+
+// ---------- Origen de cada destilado (formación del personal) ----------
+const SUB_ORIGEN = {
+  "Ron":     "caña de azúcar",
+  "Whisky":  "cereal / grano",
+  "Vodka":   "grano o patata",
+  "Tequila": "agave azul",
+  "Mezcal":  "agave",
+  "Ginebra": "grano + botánicos (enebro)",
+  "Brandy":  "uva (vino destilado)",
+  "Pisco":   "uva (mosto)",
+  "Cachaça": "caña de azúcar",
+};
+
+// ---------- Perfil de sabor por tipo de ingrediente ----------
+// Valores aproximados por ml: abv = graduación alcohólica,
+// azucar / acido = gramos por ml, gas = carbonatado (nunca se agita),
+// turbio = zumo/puré/lácteo/huevo (siempre se agita).
+const PERFIL_TIPO = {
+  // Destilados (~40º, secos)
+  "tequila": { abv: .40 }, "mezcal": { abv: .42 },
+  "ron-blanco": { abv: .40 }, "ron-oscuro": { abv: .40 }, "ron-especiado": { abv: .35 },
+  "cachaca": { abv: .40 }, "vodka": { abv: .40 },
+  "bourbon": { abv: .43 }, "whisky-centeno": { abv: .45 }, "whisky-escoces": { abv: .40 },
+  "ginebra": { abv: .42 }, "brandy": { abv: .38 }, "pisco": { abv: .40 },
+  // Licores
+  "triple-sec": { abv: .30, azucar: .25 }, "blue-curacao": { abv: .22, azucar: .28 },
+  "licor-melocoton": { abv: .18, azucar: .30 }, "licor-coco": { abv: .20, azucar: .32 },
+  "licor-sauco": { abv: .20, azucar: .30 }, "licor-cafe": { abv: .20, azucar: .33 },
+  "amaretto": { abv: .25, azucar: .30 }, "licor-hierbas": { abv: .30, azucar: .25, amargo: true },
+  "vermut-rojo": { abv: .15, azucar: .15 }, "vermut-seco": { abv: .15, azucar: .03 },
+  "campari": { abv: .25, azucar: .20, amargo: true }, "aperol": { abv: .11, azucar: .24, amargo: true },
+  "cava-prosecco": { abv: .11, azucar: .01, gas: true },
+  // Siropes
+  "sirope-simple": { azucar: .62 }, "sirope-agave": { azucar: .68 },
+  "miel": { azucar: .70, turbio: true }, "granadina": { azucar: .55 },
+  "orgeat": { azucar: .55, turbio: true }, "sirope-vainilla": { azucar: .60 }, "sirope-canela": { azucar: .60 },
+  // Zumos
+  "zumo-lima": { acido: .060, azucar: .015, turbio: true },
+  "zumo-limon": { acido: .055, azucar: .025, turbio: true },
+  "zumo-pomelo": { acido: .016, azucar: .07, turbio: true },
+  "zumo-naranja": { acido: .010, azucar: .09, turbio: true },
+  "zumo-pina": { acido: .009, azucar: .10, turbio: true },
+  "zumo-arandanos": { acido: .013, azucar: .12, turbio: true },
+  "zumo-manzana": { acido: .005, azucar: .10, turbio: true },
+  "zumo-tomate": { acido: .004, azucar: .03, turbio: true },
+  // Concentrados
+  "pure-fresa": { acido: .008, azucar: .25, turbio: true },
+  "pure-maracuya": { acido: .025, azucar: .22, turbio: true },
+  "pure-mango": { acido: .005, azucar: .28, turbio: true },
+  "crema-coco": { azucar: .40, turbio: true, cremoso: true },
+  // Refrescos
+  "soda": { gas: true }, "tonica": { azucar: .08, gas: true, amargo: true },
+  "ginger-beer": { azucar: .09, gas: true }, "ginger-ale": { azucar: .09, gas: true },
+  "cola": { azucar: .105, gas: true }, "refresco-pomelo": { azucar: .09, gas: true },
+  // Frescos y otros
+  "espresso": { acido: .004, turbio: true, amargo: true }, "clara-huevo": { turbio: true },
+  "nata": { azucar: .03, turbio: true, cremoso: true }, "angostura": { abv: .44, amargo: true }, "menta": {},
+};
