@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WanderCocktails — Estandariza tus cócteles</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>🍸 WANDER<span>COCKTAILS</span><span id="nombre-negocio" style="font-size:.9rem"></span></h1>
+  <p>El mismo cóctel, en cualquier establecimiento: configura tu cristalería y tu hielo, y las recetas se ajustan solas. Controla costes y descubre qué puedes crear con tu inventario.</p>
+  <nav>
+    <button data-sec="barra" class="activo">🥃 Mi barra</button>
+    <button data-sec="inventario">🧾 Inventario</button>
+    <button data-sec="recetas">📖 Recetas</button>
+    <button data-sec="crear">✨ Crear receta</button>
+    <button data-sec="descubrir">🔍 ¿Qué puedo crear?</button>
+    <button data-sec="ajustes">⚙️ Ajustes</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ========== MI BARRA ========== -->
+  <section id="sec-barra" class="seccion activa">
+    <h2>Mi barra: cristalería y hielo</h2>
+    <p class="sub">Marca los vasos que usa tu negocio y ajusta su capacidad real en ml (por ejemplo, tu copa margarita de 430 ml). Haz lo mismo con el hielo: su desplazamiento varía mucho entre negocios y es la clave para que el cóctel salga siempre igual.</p>
+    <div class="kpis" id="resumen-barra"></div>
+
+    <h3>Vasos y copas de coctelería</h3>
+    <div class="grid" id="lista-vasos"></div>
+
+    <h3>Tipos de hielo disponibles</h3>
+    <div class="grid" id="lista-hielos"></div>
+  </section>
+
+  <!-- ========== INVENTARIO ========== -->
+  <section id="sec-inventario" class="seccion">
+    <h2>Inventario de productos</h2>
+    <p class="sub">Registra tus licores, siropes, zumos y concentrados con su precio de compra. Con ello la app calcula el coste de producción exacto de cada cóctel y qué recetas puedes preparar.</p>
+    <div class="kpis" id="resumen-inv"></div>
+
+    <form id="form-inventario" class="form-receta">
+      <div class="fila">
+        <div class="campo">
+          <label>Producto (marca)</label>
+          <input type="text" id="inv-nombre" placeholder="Ej: Tequila Olmeca Blanco" required style="width:230px">
+        </div>
+        <div class="campo">
+          <label>Tipo de ingrediente</label>
+          <select id="inv-tipo" required></select>
+        </div>
+        <div class="campo">
+          <label>Precio de compra</label>
+          <input type="number" id="inv-precio" min="0" step="0.01" placeholder="14.50" required>
+        </div>
+        <div class="campo">
+          <label>Contenido</label>
+          <input type="number" id="inv-cantidad" min="1" step="1" placeholder="700" required>
+        </div>
+        <div class="campo">
+          <label>Unidad</label>
+          <select id="inv-unidad">
+            <option value="ml">ml</option>
+            <option value="ud">unidades</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn">+ Añadir</button>
+        </div>
+      </div>
+    </form>
+
+    <table id="inv-tabla">
+      <thead>
+        <tr>
+          <th>Producto</th><th>Tipo</th><th class="num">Precio</th>
+          <th class="num">Contenido</th><th class="num">Coste unitario</th><th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- ========== RECETAS ========== -->
+  <section id="sec-recetas" class="seccion">
+    <h2>Recetario estandarizado</h2>
+    <p class="sub">Cada receta se muestra ya escalada a TU cristalería, TU hielo y TU dilución, con su coste de producción y precio sugerido. Cambia el vaso o el hielo en «Mi barra» y todas las medidas se recalculan.</p>
+    <div class="fila" style="margin-bottom:16px">
+      <input type="text" id="filtro-recetas" placeholder="Buscar cóctel…" style="width:240px">
+      <label class="check"><input type="checkbox" id="filtro-posibles"> Solo los posibles con mi inventario</label>
+    </div>
+
+    <div id="recetas-propias-bloque">
+      <h3>⭐ Mis creaciones</h3>
+      <div class="grid" id="lista-recetas-propias"></div>
+      <h3>Clásicos</h3>
+    </div>
+    <div class="grid" id="lista-recetas"></div>
+  </section>
+
+  <!-- ========== CREAR RECETA ========== -->
+  <section id="sec-crear" class="seccion">
+    <h2>Crear nueva receta</h2>
+    <p class="sub">Diseña tus propias creaciones. Introduce las medidas de tu receta base y la app la estandarizará igual que los clásicos: se escalará al vaso y hielo de cualquier configuración.</p>
+
+    <form id="form-receta" class="form-receta">
+      <div class="fila">
+        <div class="campo">
+          <label>Nombre del cóctel</label>
+          <input type="text" id="nr-nombre" placeholder="Ej: Sunset de la casa" required style="width:240px">
+        </div>
+        <div class="campo">
+          <label>Vaso</label>
+          <select id="nr-vaso"></select>
+        </div>
+        <div class="campo">
+          <label>Técnica</label>
+          <select id="nr-tecnica"></select>
+        </div>
+        <div class="campo">
+          <label>Hielo en el servicio</label>
+          <select id="nr-hielo"></select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Ingredientes (medidas de tu receta base)</label>
+        <div id="nr-ingredientes"></div>
+        <button type="button" class="btn btn-sec btn-mini" id="btn-add-ing">+ Ingrediente</button>
+      </div>
+
+      <div class="fila">
+        <div class="campo" style="flex:1">
+          <label>Decoración</label>
+          <input type="text" id="nr-decoracion" placeholder="Ej: twist de naranja" style="width:100%">
+        </div>
+      </div>
+      <div class="campo">
+        <label>Elaboración</label>
+        <textarea id="nr-pasos" rows="2" style="width:100%" placeholder="Pasos de preparación…"></textarea>
+      </div>
+
+      <div class="fila">
+        <button type="submit" class="btn">Guardar receta</button>
+        <button type="button" class="btn btn-sec" id="btn-preview">Vista previa escalada</button>
+      </div>
+    </form>
+
+    <div id="vista-previa" style="max-width:420px"></div>
+  </section>
+
+  <!-- ========== DESCUBRIR ========== -->
+  <section id="sec-descubrir" class="seccion">
+    <h2>¿Qué puedo crear con mi inventario?</h2>
+    <p class="sub">Según los licores, siropes, zumos y concentrados que tengas registrados, estas son las recetas que puedes servir ahora mismo y las que tienes a un solo ingrediente de conseguir.</p>
+    <div class="kpis" id="resumen-descubrir"></div>
+
+    <h3 class="ok">✓ Listos para servir</h3>
+    <div class="grid" id="lista-descubrir"></div>
+
+    <h3>🛒 Te falta solo un ingrediente</h3>
+    <div class="grid" id="lista-casi"></div>
+  </section>
+
+  <!-- ========== AJUSTES ========== -->
+  <section id="sec-ajustes" class="seccion">
+    <h2>Ajustes del establecimiento</h2>
+    <p class="sub">Parámetros globales que afectan al escalado de todas las recetas y al cálculo de precios.</p>
+
+    <form id="form-ajustes" class="form-receta">
+      <div class="fila">
+        <div class="campo">
+          <label>Nombre del negocio</label>
+          <input type="text" id="aj-nombre" placeholder="Ej: Bar La Terraza" style="width:240px">
+        </div>
+        <div class="campo">
+          <label>% de llenado del vaso</label>
+          <input type="number" id="aj-llenado" min="50" max="100" step="1">
+        </div>
+        <div class="campo">
+          <label>Margen (precio = coste ×)</label>
+          <input type="number" id="aj-margen" min="1" max="20" step="0.5">
+        </div>
+        <div class="campo">
+          <label>Moneda</label>
+          <input type="text" id="aj-moneda" maxlength="4" style="width:60px">
+        </div>
+      </div>
+
+      <h3>Dilución por técnica</h3>
+      <p class="sub">Agua que se incorpora al cóctel al elaborarlo (% sobre los ingredientes). Ajústala a tu hielo y tiempos de agitado/removido.</p>
+      <div id="aj-diluciones"></div>
+
+      <div class="fila" style="margin-top:14px">
+        <button type="submit" class="btn">Guardar ajustes</button>
+        <span id="aj-guardado" class="ok"></span>
+      </div>
+    </form>
+
+    <h3>Copia de seguridad</h3>
+    <p class="sub">Exporta la configuración completa (vasos, hielos, inventario y recetas) para compartirla entre establecimientos y que todos sirvan igual.</p>
+    <div class="fila">
+      <button type="button" class="btn btn-sec" id="btn-exportar">⬇ Exportar configuración</button>
+      <label class="btn btn-sec" style="cursor:pointer">⬆ Importar configuración
+        <input type="file" id="input-importar" accept="application/json" style="display:none">
+      </label>
+    </div>
+  </section>
+
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
