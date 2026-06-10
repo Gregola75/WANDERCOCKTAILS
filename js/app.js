@@ -1456,6 +1456,27 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#form-oferta").addEventListener("submit", guardarOferta);
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   aplicarModo();
+
+  // PWA: funcionamiento offline e instalación en móvil/tablet
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* sin https no hay SW */ });
+  }
+  let eventoInstalar = null;
+  window.addEventListener("beforeinstallprompt", ev => {
+    ev.preventDefault();
+    eventoInstalar = ev;
+    $("#btn-instalar").style.display = "";
+  });
+  $("#btn-instalar").addEventListener("click", async () => {
+    if (!eventoInstalar) return;
+    eventoInstalar.prompt();
+    await eventoInstalar.userChoice;
+    eventoInstalar = null;
+    $("#btn-instalar").style.display = "none";
+  });
+  window.addEventListener("appinstalled", () => {
+    $("#btn-instalar").style.display = "none";
+  });
   $("#btn-preview").addEventListener("click", vistaPrevia);
   // Vista previa en vivo: el indicador de sabor se actualiza mientras escribes
   let temporizadorPreview = null;

@@ -114,6 +114,12 @@ Cada receta tiene el botón **«Ficha de preparación»**: una ficha a pantalla 
 - % de llenado del vaso, margen de beneficio, moneda y dilución por técnica (agitado, removido, directo, batido).
 - **Exportar / importar la configuración completa** en JSON: la central define vasos, hielos, recetas e inventario y la distribuye a todos sus locales para que todos sirvan exactamente igual.
 
+### 📲 App instalable (PWA) con modo offline
+- Se **instala como app** en el móvil o la tablet del local (botón «Instalar app» en la cabecera, o desde el menú del navegador) sin pasar por tiendas de aplicaciones.
+- **Funciona sin internet**: un service worker cachea la app completa, así la guía del bartender nunca se cae en plena barra. Las actualizaciones se descargan solas en segundo plano cuando hay conexión.
+- Icono propio y pantalla completa sin barra de navegador (`display: standalone`).
+- Requisito: servirse por **HTTPS** (GitHub Pages lo cumple). Al publicar cambios, subir la versión de `CACHE` en `sw.js`.
+
 ## Uso
 
 No requiere instalación ni servidor: es una aplicación 100 % cliente.
@@ -134,10 +140,13 @@ También puede publicarse tal cual en GitHub Pages (Settings → Pages → rama 
 ## Estructura
 
 ```
-index.html        Interfaz (6 secciones)
-css/styles.css    Estilos (tema oscuro de bar)
-js/data.js        Catálogos: vasos, hielos, técnicas, ingredientes, recetario clásico
-js/app.js         Motor de escalado, costes, disponibilidad y UI
+index.html             Interfaz (7 secciones + modo barra)
+css/styles.css         Estilos (tema oscuro de bar)
+js/data.js             Catálogos: vasos, hielos, técnicas, ingredientes, recetas, plantillas
+js/app.js              Motor de escalado, sabor, costes, ofertas, generadores y UI
+manifest.webmanifest   Manifiesto PWA (instalación como app)
+sw.js                  Service worker (funcionamiento offline)
+icons/                 Iconos de la app (generados con tools/gen-icons.mjs)
 ```
 
 ## Modelo de cálculo

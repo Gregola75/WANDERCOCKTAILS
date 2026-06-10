@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1c1410">
+  <meta name="description" content="El mismo cóctel en cualquier establecimiento: recetas escaladas a tu cristalería y hielo, costes, ofertas y guía paso a paso para el bartender.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>WanderCocktails — Estandariza tus cócteles</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -11,7 +16,10 @@
 <header>
   <div class="cabecera-app">
     <h1>🍸 WANDER<span>COCKTAILS</span><span id="nombre-negocio" style="font-size:.9rem"></span> <span id="badge-modo" class="badge-modo"></span></h1>
-    <button class="btn btn-sec btn-mini" id="btn-modo">🔓 Modo máster</button>
+    <div class="fila">
+      <button class="btn btn-mini" id="btn-instalar" style="display:none">📲 Instalar app</button>
+      <button class="btn btn-sec btn-mini" id="btn-modo">🔓 Modo máster</button>
+    </div>
   </div>
   <p>El mismo cóctel, en cualquier establecimiento: configura tu cristalería y tu hielo, y las recetas se ajustan solas. Controla costes y descubre qué puedes crear con tu inventario.</p>
   <nav>
