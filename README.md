@@ -69,6 +69,26 @@ El generador propone cócteles nuevos **solo con los productos del inventario de
 - En los chupitos **en capas (pousse-café)**, la app calcula el **orden de vertido por densidad** (más azúcar = más denso = abajo); el orden del B-52 calculado coincide con el real: café → crema irlandesa → triple sec.
 - Dos plantillas nuevas en «Inventar»: chupito en capas y chupito cítrico (mini sour), para crear la carta de shots de la casa con el inventario propio.
 
+### 🔥 Generador de carta de chupitos
+En «Inventar», un clic genera **decenas de chupitos nuevos** combinando el inventario del negocio con patrones probados, clasificados por intensidad real (graduación final calculada):
+
+- 🍑 **Suaves** (< 15º): licor + fruta — los más rentables, para rondas grandes
+- ⚡ **Medios** (15-25º): mini sours estilo kamikaze — los más vendidos
+- 🔥 **Fuertes** (> 25º): capas vistosas y tragos secos
+
+Cada grupo se ordena por rentabilidad (menor coste primero) y muestra graduación, coste, PVP y ganancia por unidad. Cualquier propuesta se guarda en la carta con un clic.
+
+### 🥶 Frozen y cócteles con helado que no se aguan
+Las reglas físicas del frozen están codificadas en la app:
+
+1. **Alcohol máx. 20-24 % del líquido** — el alcohol no congela; pasarse es la causa nº 1 de frozen aguados
+2. **Dulzor +25 % vs. la versión fría** (el frío apaga el sabor; objetivo 10-14 g/100 ml)
+3. **Hielo 1,7× el líquido** en frozen clásico; **sin hielo** si lleva helado (el helado es el hielo)
+4. **Cuerpo mínimo 15-20 %** (puré, crema, plátano o helado) para que no quede granizado
+5. **Todo frío y batido corto** a máxima potencia
+
+Toda receta batida muestra el panel **«Control frozen»**: % real de alcohol en el líquido, avisos si algo va a salir aguado o soso, y los **gramos exactos de hielo** para batir. Incluye técnica nueva «Batido con helado», plantilla 🍨 en el asistente, ingredientes helado de vainilla y plátano, y 3 clásicos nuevos: Frozen Margarita, Frozen Daiquiri de Fresa y Mudslide con helado.
+
 ### 💰 Ofertas rentables
 - Creador de promociones sobre el **coste real**: 2×1, happy hour (% descuento), precio cerrado y combos de 2 cócteles.
 - Cada oferta muestra ingreso, coste de producción, margen por venta y **semáforo de rentabilidad**: verde (coste ≤ 35 %), ámbar (≤ 50 %, para horas valle), rojo (pierdes margen).

@@ -49,6 +49,7 @@ const TECNICAS = [
   { id: "removido", nombre: "Removido (stir)",    dilucionPct: 15 },
   { id: "directo",  nombre: "Directo en vaso (build)", dilucionPct: 5 },
   { id: "batido",   nombre: "Batido / Frozen (blend)", dilucionPct: 45 },
+  { id: "batido-helado", nombre: "Batido con helado (sin hielo)", dilucionPct: 10 },
   { id: "capas",    nombre: "En capas (pousse-café)",  dilucionPct: 0 },
   { id: "ninguna",  nombre: "Sin dilución",       dilucionPct: 0 },
 ];
@@ -135,6 +136,8 @@ const TIPOS_INGREDIENTE = [
   { id: "espresso",        nombre: "Café espresso",          cat: "Frescos", sub: "Perecederos", rol: "aroma" },
   { id: "clara-huevo",     nombre: "Clara de huevo",         cat: "Frescos", sub: "Perecederos", rol: "textura" },
   { id: "nata",            nombre: "Nata / crema de leche",  cat: "Frescos", sub: "Perecederos", rol: "textura" },
+  { id: "helado-vainilla", nombre: "Helado de vainilla",     cat: "Frescos", sub: "Perecederos", rol: "textura" },
+  { id: "platano",         nombre: "Plátano fresco",         cat: "Frescos", sub: "Perecederos", rol: "pure" },
   { id: "menta",           nombre: "Menta / hierbabuena fresca", cat: "Frescos", sub: "Hierbas", rol: "aroma" },
   { id: "angostura",       nombre: "Angostura bitters",      cat: "Frescos", sub: "Bitters",    rol: "bitter" },
 ];
@@ -252,6 +255,20 @@ const PLANTILLAS_CREACION = [
       { rol: ["base"],          ml: 50, nombre: "Destilado base" },
       { rol: ["textura"],       ml: 30, nombre: "Cuerpo cremoso" },
       { rol: ["zumo", "pure"],  ml: 90, nombre: "Fruta" },
+    ],
+  },
+  {
+    id: "frozen-helado", nombreCorto: "Batido con helado", emoji: "🍨",
+    nombre: "Batido con helado — Postre con alcohol",
+    formula: "base + licor + 2 bolas de helado, batido sin hielo",
+    desc: "El helado sustituye al hielo: congela, endulza y da cremosidad de postre. La regla anti-aguado: poco alcohol (el alcohol no congela), nada de hielo y batir poco tiempo a máxima potencia.",
+    ejemplos: "Mudslide, Brandy Alexander helado",
+    vaso: "hurricane", tecnica: "batido-helado", hielo: "sin-hielo",
+    slots: [
+      { rol: ["base"],                 ml: 30,  nombre: "Destilado base" },
+      { rol: ["licor-dulce"],          ml: 30,  nombre: "Licor que da el sabor" },
+      { rol: ["textura"],              ml: 120, nombre: "Helado (2 bolas) o crema" },
+      { rol: ["pure", "zumo"],         ml: 40,  nombre: "Fruta", opcional: true },
     ],
   },
   {
@@ -484,6 +501,33 @@ const RECETAS_CLASICAS = [
     decoracion: "Gotas de angostura sobre la espuma",
     pasos: "Dry shake, agitar con hielo, colar fino y decorar la espuma con angostura.",
   },
+  {
+    id: "frozen-margarita", nombre: "Frozen Margarita", vaso: "margarita", tecnica: "batido", hielo: "frappe",
+    ingredientes: [
+      { tipo: "tequila", ml: 45 }, { tipo: "triple-sec", ml: 15 },
+      { tipo: "zumo-lima", ml: 25 }, { tipo: "sirope-agave", ml: 15 },
+    ],
+    decoracion: "Borde de sal y rodaja de lima",
+    pasos: "Batir con hielo frappé hasta textura de granizado fino. Todo muy frío antes de batir.",
+  },
+  {
+    id: "frozen-daiquiri-fresa", nombre: "Frozen Daiquiri de Fresa", vaso: "hurricane", tecnica: "batido", hielo: "frappe",
+    ingredientes: [
+      { tipo: "ron-blanco", ml: 50 }, { tipo: "zumo-lima", ml: 20 },
+      { tipo: "sirope-simple", ml: 15 }, { tipo: "pure-fresa", ml: 50 },
+    ],
+    decoracion: "Fresa en el borde",
+    pasos: "Batir con hielo frappé; el puré da el cuerpo que evita que se ague.",
+  },
+  {
+    id: "mudslide", nombre: "Mudslide (con helado)", vaso: "hurricane", tecnica: "batido-helado", hielo: "sin-hielo",
+    ingredientes: [
+      { tipo: "vodka", ml: 30 }, { tipo: "licor-cafe", ml: 30 },
+      { tipo: "crema-irlandesa", ml: 30 }, { tipo: "helado-vainilla", ml: 120 },
+    ],
+    decoracion: "Sirope de chocolate en las paredes y nata",
+    pasos: "Batir con el helado SIN hielo, poco tiempo y a máxima potencia. Copa helada.",
+  },
 ];
 
 // ---------- Carta de chupitos (los shots más famosos del mundo) ----------
@@ -634,4 +678,6 @@ const PERFIL_TIPO = {
   // Frescos y otros
   "espresso": { acido: .004, turbio: true, amargo: true }, "clara-huevo": { turbio: true },
   "nata": { azucar: .03, turbio: true, cremoso: true }, "angostura": { abv: .44, amargo: true }, "menta": {},
+  "helado-vainilla": { azucar: .21, turbio: true, cremoso: true },
+  "platano": { azucar: .12, acido: .003, turbio: true, cremoso: true },
 };

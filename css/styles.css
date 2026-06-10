@@ -252,6 +252,27 @@ td.num, th.num { text-align: right; }
 .sabor-fill.f-acidez { background: linear-gradient(90deg, #7fbf73, #cfe07a); }
 .sabor-val { font-size: .72rem; color: var(--text-2); width: 118px; flex-shrink: 0; text-align: right; }
 
+/* Control frozen */
+.frozen-panel {
+  background: rgba(122, 168, 214, .08);
+  border: 1px solid #3a4f63;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: .82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.frozen-panel b { color: var(--blue); }
+
+/* Generador de carta de chupitos */
+.grupo-shots { margin: 22px 0 4px; font-size: 1.05rem; color: var(--gold-2); }
+
+/* Reglas de oro (listas) */
+.reglas { padding-left: 22px; margin: 10px 0; }
+.reglas li { font-size: .85rem; color: var(--text-2); margin-bottom: 8px; line-height: 1.45; }
+.reglas li b { color: var(--text); }
+
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
   nav { overflow-x: auto; flex-wrap: nowrap; }

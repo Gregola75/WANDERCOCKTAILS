@@ -458,7 +458,7 @@ function veredictoSabor(p) {
   // Sin ácido que compense (o con muy poco)
   if (p.dulzor < 1.5) return { clase: "tag-ok", texto: "✓ Seco y espirituoso (estilo martini / ancestral)" };
   if (p.amargo && p.dulzor <= 12) return { clase: "tag-ok", texto: "✓ Agridulce: el amargor compensa el dulzor (perfil aperitivo)" };
-  if (p.cremoso && p.dulzor <= 12) return { clase: "tag-ok", texto: "✓ Cremoso y goloso (perfil tropical / postre)" };
+  if (p.cremoso && p.dulzor <= 18) return { clase: "tag-ok", texto: "✓ Cremoso y goloso (perfil tropical / postre)" };
   if (p.gas && p.dulzor <= 11) return { clase: "tag-ok", texto: "✓ Refrescante y dulce (perfil combinado)" };
   if (p.dulzor <= 6) return { clase: "tag-ok", texto: "✓ Semiseco: dulzor sutil sobre la base" };
   if (p.dulzor <= 11) return { clase: "tag", texto: "Perfil dulce y afrutado: un toque de cítrico lo equilibraría aún más" };
@@ -504,8 +504,9 @@ function panelSabor(receta, escalada) {
   const p = perfilSabor(escalada);
   const v = veredictoSabor(p);
   const m = metodoRecomendado(p);
-  // El batido es un agitado con hielo dentro: lo damos por bueno si tocaba agitar
-  const coincide = receta.tecnica === m.id || (receta.tecnica === "batido" && m.id === "agitado");
+  // El batido (con o sin helado) es un agitado con frío dentro: vale si tocaba agitar
+  const coincide = receta.tecnica === m.id ||
+    ((receta.tecnica === "batido" || receta.tecnica === "batido-helado") && m.id === "agitado");
   // Excepción de barra: zumos construidos sobre hielo (macerados, combinados)
   // valen en directo si no llevan nada que exija emulsión.
   const construidoValido = !coincide && m.id === "agitado" && receta.tecnica === "directo" &&
@@ -527,6 +528,39 @@ function panelSabor(receta, escalada) {
       ${barraSabor("Acidez", p.acidez, 1.5, "f-acidez", p.acidez.toFixed(2) + " g/100ml")}
       <div><span class="tag ${v.clase}">${v.texto}</span></div>
       <div>${metodoHtml}</div>
+    </div>`;
+}
+
+// ---------- Control frozen (que no quede aguado) ----------
+// Reglas físicas del frozen: el alcohol no congela (máx. ~24 % del líquido),
+// el frío apaga el dulzor (objetivo 10-14 g/100ml) y sin cuerpo queda granizado.
+function panelFrozen(receta, escalada) {
+  if (receta.tecnica !== "batido" && receta.tecnica !== "batido-helado") return "";
+  let liquido = 0, alcohol = 0, cuerpo = 0;
+  escalada.ingredientes.forEach(i => {
+    const p = PERFIL_TIPO[i.tipo] || {};
+    const ml = i.mlFinal || 0;
+    liquido += ml;
+    alcohol += ml * (p.abv || 0);
+    if (p.cremoso || tipoPorId(i.tipo)?.rol === "pure") cuerpo += ml;
+  });
+  if (!liquido) return "";
+  const abvLiq = alcohol / liquido * 100;
+  const cuerpoPct = cuerpo / liquido * 100;
+  const p = perfilSabor(escalada);
+  const avisos = [];
+  if (abvLiq > 24) avisos.push(`<span class="tag tag-mal">⚠ ${abvLiq.toFixed(0)} % de alcohol en el líquido: el alcohol no congela y quedará aguado — baja el destilado o sube fruta/helado (ideal ≤ 20-24 %)</span>`);
+  if (p.dulzor < 8) avisos.push(`<span class="tag tag-mal">⚠ Poco dulce (${p.dulzor.toFixed(1)} g/100ml): el frío apaga el sabor — en frozen sube el dulzor un 25 % (objetivo 10-14)</span>`);
+  if (cuerpoPct < 15) avisos.push(`<span class="tag">💡 Apenas hay cuerpo (puré/crema/helado/plátano): saldrá tipo granizado; añade fruta con cuerpo para textura cremosa</span>`);
+  if (!avisos.length) avisos.push(`<span class="tag tag-ok">✓ Frozen estable: alcohol ${abvLiq.toFixed(0)} %, dulzor y cuerpo correctos — no se aguará</span>`);
+  const hieloTxt = receta.tecnica === "batido"
+    ? `🧊 Hielo para batir: ~${Math.round(liquido * 1.7)} g (1,7× el líquido). Menos hielo = sopa; más = granizado sin sabor.`
+    : `🍨 Sin hielo: el helado congela y da el cuerpo. Vaso e ingredientes muy fríos y batir poco tiempo a máxima potencia.`;
+  return `
+    <div class="frozen-panel">
+      <b>🥶 Control frozen</b>
+      ${avisos.map(a => `<div>${a}</div>`).join("")}
+      <p class="meta">${hieloTxt}</p>
     </div>`;
 }
 
@@ -582,6 +616,7 @@ function tarjetaReceta(receta, opciones = {}) {
       <div>${lineas}</div>
       ${capasHtml}
       ${panelSabor(receta, e)}
+      ${panelFrozen(receta, e)}
       <p class="meta">
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
         ${e.despPct ? `+ hielo (vaso lleno al ${estado.llenadoPct} %)` : `(${estado.llenadoPct} % del vaso)`}
@@ -947,6 +982,115 @@ function mostrarPropuesta(plantillaId) {
   zona.scrollIntoView({ behavior: "smooth" });
 }
 
+// ---------- Generador de carta de chupitos ----------
+// Combina el inventario en patrones de shot probados y clasifica el resultado
+// por intensidad real (graduación final), ordenado por rentabilidad.
+let cartaShotsActual = {};
+
+function generarCartaChupitos() {
+  const porRol = inventarioPorRol();
+  const bases = porRol.base || [];
+  const licores = porRol["licor-dulce"] || [];
+  const dulces = porRol.dulce || [];
+  const acidos = porRol.acido || [];
+  const frutas = (porRol.zumo || []).concat(porRol.pure || []);
+  const candidatos = [];
+  const visto = new Set();
+  const add = (nombre, tecnica, ings, pasos) => {
+    const clave = ings.map(i => i.tipo).sort().join("|") + tecnica;
+    if (visto.has(clave)) return;
+    visto.add(clave);
+    candidatos.push({
+      id: "shotgen-" + candidatos.length, nombre, vaso: "shot", tecnica,
+      hielo: "sin-hielo", esShot: true, ingredientes: ings, decoracion: "", pasos,
+    });
+  };
+
+  // Suaves: licor + fruta (agitado y colado)
+  licores.forEach(l => frutas.forEach(f =>
+    add(`Shot de ${nombreCortoTipo(l.tipo)} y ${nombreCortoTipo(f.tipo)}`, "agitado",
+      [{ tipo: l.tipo.id, ml: 25 }, { tipo: f.tipo.id, ml: 20 }],
+      "Agitar con hielo y colar fino en el caballito.")));
+  // Medios: mini sour (base + cítrico + dulce/licor)
+  bases.forEach(b => acidos.forEach(a => dulces.concat(licores).forEach(d => {
+    if (d.tipo.id === b.tipo.id) return;
+    add(`Mini sour de ${nombreCortoTipo(b.tipo)} y ${nombreCortoTipo(d.tipo)}`, "agitado",
+      [{ tipo: b.tipo.id, ml: 22 }, { tipo: a.tipo.id, ml: 13 }, { tipo: d.tipo.id, ml: 10 }],
+      "Agitar con hielo y colar fino: la regla de oro en 45 ml.");
+  })));
+  // En capas: sirope denso + licor + remate (espectáculo)
+  dulces.forEach(d => licores.forEach(l => bases.concat(licores).forEach(t => {
+    if (t.tipo.id === l.tipo.id) return;
+    add(`Capas de ${nombreCortoTipo(l.tipo)} y ${nombreCortoTipo(t.tipo)}`, "capas",
+      [{ tipo: d.tipo.id, ml: 15 }, { tipo: l.tipo.id, ml: 15 }, { tipo: t.tipo.id, ml: 15 }],
+      "Verter por capas sobre el dorso de una cuchara, el más denso abajo.");
+  })));
+  // Fuertes: base + licor, directo
+  bases.forEach(b => licores.forEach(l =>
+    add(`Trago corto de ${nombreCortoTipo(b.tipo)} y ${nombreCortoTipo(l.tipo)}`, "directo",
+      [{ tipo: b.tipo.id, ml: 25 }, { tipo: l.tipo.id, ml: 20 }],
+      "Construir directo en el caballito.")));
+
+  const grupos = { suave: [], medio: [], fuerte: [] };
+  candidatos.forEach(r => {
+    const e = escalarReceta(r);
+    const c = costeReceta(e);
+    if (!c.completo) return;
+    const p = perfilSabor(e);
+    const g = p.abv < 15 ? "suave" : p.abv < 25 ? "medio" : "fuerte";
+    grupos[g].push({ r, e, c, p });
+  });
+  Object.values(grupos).forEach(g => g.sort((a, b) => a.c.total - b.c.total));
+  return grupos;
+}
+
+function renderCartaShots() {
+  const zona = $("#zona-carta-shots");
+  if (!estado.inventario.length) {
+    zona.innerHTML = `<div class="aviso">Añade primero productos con precio a tu inventario: la carta se genera solo con lo que tienes.</div>`;
+    return;
+  }
+  const grupos = generarCartaChupitos();
+  cartaShotsActual = {};
+  const bloque = (titulo, desc, lista) => {
+    let html = `<h4 class="grupo-shots">${titulo}</h4><p class="sub">${desc}</p>`;
+    if (!lista.length) return html + `<p class="vacio">Sin combinaciones en este grupo: amplía el inventario.</p>`;
+    return html + `<div class="grid">` + lista.slice(0, 8).map(x => {
+      cartaShotsActual[x.r.id] = x.r;
+      const ings = x.e.ingredientes.map(i => `${i.texto} ${i.nombreTipo}`).join(" + ");
+      const pvp = x.c.total * estado.margen;
+      return `
+        <div class="card">
+          <h4>${esc(x.r.nombre)}</h4>
+          <p class="desc">${esc(ings)}${x.r.tecnica === "capas" ? " · en capas" : ""}</p>
+          <div>
+            <span class="tag tag-oro">${x.p.abv.toFixed(0)}º · ${etiquetaFuerza(x.p.abv)}</span>
+            <span class="tag">coste ${fmtDinero(x.c.total)}</span>
+            <span class="tag tag-ok">PVP ${fmtDinero(pvp)} · ganas ${fmtDinero(pvp - x.c.total)}</span>
+          </div>
+          <div class="fila" style="margin-top:8px">
+            <button class="btn btn-sec btn-mini" data-guardar-shot="${x.r.id}">💾 Añadir a mi carta</button>
+          </div>
+        </div>`;
+    }).join("") + `</div>`;
+  };
+  const total = grupos.suave.length + grupos.medio.length + grupos.fuerte.length;
+  zona.innerHTML = `
+    <div class="kpis"><div class="kpi"><b>${total}</b> chupitos posibles con tu inventario (mostrando los 8 más rentables de cada grupo)</div></div>
+    ${bloque("🍑 Suaves (menos de 15º)", "Para abrir la noche, rondas grandes y público que no busca alcohol fuerte. Los más rentables de la carta.", grupos.suave)}
+    ${bloque("⚡ Medios (15-25º)", "El punto kamikaze: cítricos y equilibrados, los que más se venden.", grupos.medio)}
+    ${bloque("🔥 Fuertes (más de 25º)", "Para celebraciones y valientes: capas vistosas y tragos secos.", grupos.fuerte)}`;
+  zona.querySelectorAll("[data-guardar-shot]").forEach(b => b.addEventListener("click", () => {
+    const r = cartaShotsActual[b.dataset.guardarShot];
+    if (!r) return;
+    estado.recetasPropias.push({ ...r, id: "propia-" + Date.now() });
+    guardarEstado();
+    b.textContent = "✓ Añadido a mi carta";
+    b.disabled = true;
+  }));
+  zona.scrollIntoView({ behavior: "smooth" });
+}
+
 // ---------- Descubrir (¿qué puedo crear?) ----------
 function renderDescubrir() {
   const cont = $("#lista-descubrir");
@@ -1208,6 +1352,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 400);
   });
   $("#btn-sorprendeme").addEventListener("click", () => mostrarPropuesta("azar"));
+  $("#btn-carta-shots").addEventListener("click", renderCartaShots);
   $("#filtro-recetas").addEventListener("input", renderRecetas);
   $("#filtro-posibles").addEventListener("change", renderRecetas);
   $("#form-ajustes").addEventListener("submit", guardarAjustes);
