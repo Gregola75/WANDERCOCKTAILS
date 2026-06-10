@@ -16,6 +16,7 @@
     <button data-sec="inventario">🧾 Inventario</button>
     <button data-sec="recetas">📖 Recetas</button>
     <button data-sec="crear">✨ Crear receta</button>
+    <button data-sec="inventar">🧪 Inventar</button>
     <button data-sec="descubrir">🔍 ¿Qué puedo crear?</button>
     <button data-sec="ajustes">⚙️ Ajustes</button>
   </nav>
@@ -49,6 +50,10 @@
           <input type="text" id="inv-nombre" placeholder="Ej: Tequila Olmeca Blanco" required style="width:230px">
         </div>
         <div class="campo">
+          <label>Categoría</label>
+          <select id="inv-cat"></select>
+        </div>
+        <div class="campo">
           <label>Tipo de ingrediente</label>
           <select id="inv-tipo" required></select>
         </div>
@@ -74,15 +79,25 @@
       </div>
     </form>
 
-    <table id="inv-tabla">
-      <thead>
-        <tr>
-          <th>Producto</th><th>Tipo</th><th class="num">Precio</th>
-          <th class="num">Contenido</th><th class="num">Coste unitario</th><th></th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div class="chips" id="inv-chips"></div>
+    <div id="inv-lista"></div>
+  </section>
+
+  <!-- ========== INVENTAR ========== -->
+  <section id="sec-inventar" class="seccion">
+    <h2>Inventar cócteles con las reglas de oro</h2>
+    <p class="sub">Los bartenders no inventan a ciegas: parten de fórmulas de equilibrio probadas durante décadas. Elige una familia y el asistente propondrá un cóctel nuevo usando <b>solo los productos de tu inventario</b>, ya escalado a tu cristalería y con su coste calculado. Sin IA externa ni conexión: pura coctelería.</p>
+
+    <div class="card" style="margin-bottom:18px">
+      <h4>⚖️ La regla de oro del equilibrio</h4>
+      <p class="desc">Todo cóctel equilibrado combina estos roles: una <b>base alcohólica</b> que da carácter, un <b>dulce</b> (sirope o licor) y un <b>ácido</b> (lima/limón) que se compensan entre sí, y opcionalmente un <b>alargador</b>, una <b>textura</b> o unos <b>bitters</b> que redondean. La proporción madre es <b>2 : 1 : 1</b> (base : ácido : dulce). Cada producto de tu inventario tiene asignado su rol, así el asistente nunca propone combinaciones desequilibradas.</p>
+      <button class="btn" id="btn-sorprendeme">🎲 Sorpréndeme: proponme un cóctel</button>
+    </div>
+
+    <div id="zona-propuesta"></div>
+
+    <h3>Las 8 familias de la coctelería</h3>
+    <div class="grid" id="lista-plantillas"></div>
   </section>
 
   <!-- ========== RECETAS ========== -->

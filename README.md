@@ -24,7 +24,25 @@ WanderCocktails parte de un **recetario de referencia con proporciones verificad
 
 ### 🧾 Inventario y costes
 - Registro de licores, siropes, zumos y concentrados con precio de compra y contenido → coste por ml.
+- **Taxonomía profesional** en dos niveles: 7 categorías (🥃 Destilados, 🍷 Licores, 🍯 Siropes, 🍋 Zumos, 🥭 Concentrados, 🫧 Refrescos, 🌿 Frescos) con subcategorías (Agave, Caña de azúcar, Grano, Botánicos, Vermuts, Aperitivos amargos, Purés de fruta…).
+- Lista agrupada por categoría con filtros tipo chip, valor de stock por categoría y coste unitario por 100 ml.
 - Cada receta muestra su **coste de producción real** ya escalado, el **precio de venta sugerido** (coste × margen configurable) y el % de coste sobre PVP.
+
+### 🧪 Inventar — el asistente con las reglas de oro
+Cada tipo de ingrediente tiene asignado un **rol coctelero** (base alcohólica, dulce, ácido, alargador, textura, bitter, aperitivo, espumoso…). Sobre esos roles, el asistente aplica las **8 fórmulas de equilibrio** con las que trabajan los bartenders profesionales:
+
+| Familia | Fórmula | Ejemplos clásicos |
+|---|---|---|
+| 🍋 Sour (la regla de oro) | 2 base : 1 ácido : 1 dulce | Margarita, Daiquiri, Whisky Sour |
+| 🫧 Highball | 1 base : 3 alargador | Gin Tonic, Paloma, Moscow Mule |
+| 🥃 Ancestral | base + pizca de dulce + bitters | Old Fashioned, Sazerac |
+| 🍸 Estilo Martini | 2-3 base : 1 vermut/aperitivo | Dry Martini, Manhattan, Negroni |
+| 🍹 Spritz | 3 aperitivo : 2 espumoso : 1 soda | Aperol Spritz, Hugo |
+| 🗿 Tiki | base partida + ácido + sirope + fruta | Mai Tai, Zombie |
+| 🥥 Frozen / Cremoso | base + textura + fruta, batido | Piña Colada |
+| 🥭 Sour de fruta | sour 2:1:1 + puré intenso | Margarita de maracuyá, Mango Sour |
+
+El generador propone cócteles nuevos **solo con los productos del inventario del negocio**, ya escalados a su cristalería y con coste calculado; muestra qué producto concreto cubre cada rol, permite pedir «otra versión» y guardar la propuesta en «Mis recetas». Si falta un rol (p. ej. no hay espumoso), indica exactamente qué comprar para desbloquear esa familia entera. Todo funciona **sin IA externa**: es un motor de reglas de coctelería, sin API ni conexión.
 
 ### 🔍 ¿Qué puedo crear?
 - Cruza el recetario (clásicos + creaciones propias) con el inventario del negocio.

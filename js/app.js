@@ -183,8 +183,25 @@ function cambiarSeccion(id) {
   if (id === "inventario") renderInventario();
   if (id === "recetas") renderRecetas();
   if (id === "crear") renderCrear();
+  if (id === "inventar") renderInventar();
   if (id === "descubrir") renderDescubrir();
   if (id === "ajustes") renderAjustes();
+}
+
+// Opciones <select> de tipos agrupadas por categoría · subcategoría
+function opcionesTiposHtml(soloCat) {
+  const tipos = TIPOS_INGREDIENTE.filter(t => !soloCat || t.cat === soloCat);
+  let grupo = "", html = "";
+  tipos.forEach(t => {
+    const g = t.cat + " · " + t.sub;
+    if (g !== grupo) {
+      if (grupo) html += "</optgroup>";
+      html += `<optgroup label="${esc(g)}">`;
+      grupo = g;
+    }
+    html += `<option value="${t.id}">${esc(t.nombre)}</option>`;
+  });
+  return html + (grupo ? "</optgroup>" : "");
 }
 
 // ---------- Mi barra (vasos + hielos) ----------
@@ -283,40 +300,69 @@ function renderBarra() {
 }
 
 // ---------- Inventario ----------
-function renderInventario() {
-  const selTipo = $("#inv-tipo");
-  if (!selTipo.options.length) {
-    let cat = "";
-    let html = "";
-    TIPOS_INGREDIENTE.forEach(t => {
-      if (t.cat !== cat) {
-        if (cat) html += "</optgroup>";
-        html += `<optgroup label="${esc(t.cat)}">`;
-        cat = t.cat;
-      }
-      html += `<option value="${t.id}">${esc(t.nombre)}</option>`;
-    });
-    selTipo.innerHTML = html + "</optgroup>";
-  }
+let filtroCatInv = "todas"; // chip de categoría activo en la vista de inventario
 
-  const cuerpo = $("#inv-tabla tbody");
-  if (!estado.inventario.length) {
-    cuerpo.innerHTML = `<tr><td colspan="6" class="vacio">Añade tus botellas, siropes, zumos y concentrados con su precio para calcular costes.</td></tr>`;
-  } else {
-    cuerpo.innerHTML = estado.inventario.map(item => {
-      const t = tipoPorId(item.tipo);
-      const cu = item.precio && item.cantidad ? item.precio / item.cantidad : 0;
-      return `<tr>
-        <td>${esc(item.nombre)}</td>
-        <td><span class="tag">${esc(t ? t.nombre : item.tipo)}</span></td>
-        <td class="num">${fmtDinero(item.precio)}</td>
-        <td class="num">${item.cantidad} ${item.unidad}</td>
-        <td class="num">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
-        <td><button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button></td>
-      </tr>`;
-    }).join("");
+function renderInventario() {
+  // Selector de tipo del formulario: la categoría elegida en el desplegable
+  // de categoría acota los tipos disponibles.
+  const selCat = $("#inv-cat");
+  if (!selCat.options.length) {
+    selCat.innerHTML = `<option value="">Todas las categorías</option>` +
+      CATEGORIAS.map(c => `<option value="${c.id}">${c.emoji} ${esc(c.id)}</option>`).join("");
+    selCat.addEventListener("change", () => {
+      $("#inv-tipo").innerHTML = opcionesTiposHtml(selCat.value || null);
+    });
   }
-  cuerpo.querySelectorAll("[data-borrar-inv]").forEach(b => {
+  if (!$("#inv-tipo").options.length) $("#inv-tipo").innerHTML = opcionesTiposHtml(null);
+
+  // Chips de filtrado de la lista
+  const conteo = {};
+  estado.inventario.forEach(i => {
+    const t = tipoPorId(i.tipo);
+    if (t) conteo[t.cat] = (conteo[t.cat] || 0) + 1;
+  });
+  $("#inv-chips").innerHTML =
+    `<button class="chip ${filtroCatInv === "todas" ? "activo" : ""}" data-chip="todas">Todas (${estado.inventario.length})</button>` +
+    CATEGORIAS.map(c =>
+      `<button class="chip ${filtroCatInv === c.id ? "activo" : ""}" data-chip="${c.id}">${c.emoji} ${esc(c.id)} (${conteo[c.id] || 0})</button>`
+    ).join("");
+  $$("#inv-chips .chip").forEach(ch => ch.addEventListener("click", () => {
+    filtroCatInv = ch.dataset.chip;
+    renderInventario();
+  }));
+
+  // Lista agrupada por categoría → subcategoría
+  const cont = $("#inv-lista");
+  if (!estado.inventario.length) {
+    cont.innerHTML = `<p class="vacio">Añade tus botellas, siropes, zumos y concentrados con su precio para calcular costes.</p>`;
+  } else {
+    cont.innerHTML = CATEGORIAS.filter(c => filtroCatInv === "todas" || filtroCatInv === c.id).map(c => {
+      const items = estado.inventario.filter(i => tipoPorId(i.tipo)?.cat === c.id);
+      if (!items.length) return "";
+      const valor = items.reduce((s, i) => s + (i.precio || 0), 0);
+      const filas = items.map(item => {
+        const t = tipoPorId(item.tipo);
+        const cu = item.precio && item.cantidad ? item.precio / item.cantidad : 0;
+        return `<tr>
+          <td><b>${esc(item.nombre)}</b></td>
+          <td><span class="tag">${esc(t.sub)}</span> <span class="tag tag-oro">${esc(t.nombre)}</span></td>
+          <td class="num">${fmtDinero(item.precio)}</td>
+          <td class="num">${item.cantidad} ${item.unidad}</td>
+          <td class="num">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
+          <td><button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button></td>
+        </tr>`;
+      }).join("");
+      return `
+        <div class="cat-bloque">
+          <div class="cat-cabecera">
+            <span>${c.emoji} <b>${esc(c.id)}</b> · ${items.length} producto${items.length > 1 ? "s" : ""}</span>
+            <span class="meta">${esc(c.desc)} · stock: ${fmtDinero(valor)}</span>
+          </div>
+          <table><tbody>${filas}</tbody></table>
+        </div>`;
+    }).join("") || `<p class="vacio">No hay productos en esta categoría.</p>`;
+  }
+  cont.querySelectorAll("[data-borrar-inv]").forEach(b => {
     b.addEventListener("click", () => {
       estado.inventario = estado.inventario.filter(i => i.id !== b.dataset.borrarInv);
       guardarEstado(); renderInventario();
@@ -428,16 +474,7 @@ let filasIngredientes = 0;
 
 function filaIngredienteHtml() {
   filasIngredientes++;
-  let cat = "", opciones = "";
-  TIPOS_INGREDIENTE.forEach(t => {
-    if (t.cat !== cat) {
-      if (cat) opciones += "</optgroup>";
-      opciones += `<optgroup label="${esc(t.cat)}">`;
-      cat = t.cat;
-    }
-    opciones += `<option value="${t.id}">${esc(t.nombre)}</option>`;
-  });
-  opciones += "</optgroup>";
+  const opciones = opcionesTiposHtml(null);
   return `
     <div class="ing-row" data-fila="${filasIngredientes}">
       <select class="ing-tipo">${opciones}</select>
@@ -533,6 +570,142 @@ function vistaPrevia() {
     pasos: $("#nr-pasos").value.trim(),
   };
   $("#vista-previa").innerHTML = tarjetaReceta(recetaTemp);
+}
+
+// ---------- Inventar (asistente con las reglas de oro) ----------
+let propuestaActual = null;   // última receta generada, lista para guardar
+
+// Agrupa el inventario por rol coctelero: rol -> [{tipo, productos}]
+function inventarioPorRol() {
+  const porTipo = {};
+  estado.inventario.forEach(item => {
+    (porTipo[item.tipo] = porTipo[item.tipo] || []).push(item.nombre);
+  });
+  const mapa = {};
+  Object.keys(porTipo).forEach(tipoId => {
+    const t = tipoPorId(tipoId);
+    if (!t) return;
+    (mapa[t.rol] = mapa[t.rol] || []).push({ tipo: t, productos: porTipo[tipoId] });
+  });
+  return mapa;
+}
+
+// Nombre corto de un tipo para bautizar la creación ("Zumo de piña" -> "Piña")
+function nombreCortoTipo(t) {
+  let n = t.nombre
+    .replace(/^(Zumo de|Puré \/ concentrado de|Sirope de|Licor de(?: flor de)?|Crema de|Refresco de|Whisky de|Whisky)\s*/i, "")
+    .replace(/\s*\(.*\)$/, "")
+    .split("/")[0].trim();
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+
+function generarPropuesta(plantilla) {
+  const porRol = inventarioPorRol();
+  const usados = new Set();
+  const ingredientes = [];
+  const detalle = [];
+  const faltan = [];
+
+  plantilla.slots.forEach(slot => {
+    const candidatos = slot.rol.flatMap(r => porRol[r] || []).filter(c => !usados.has(c.tipo.id));
+    if (!candidatos.length) {
+      if (!slot.opcional) faltan.push(slot);
+      return;
+    }
+    const elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
+    usados.add(elegido.tipo.id);
+    const ing = { tipo: elegido.tipo.id };
+    if (slot.dash) ing.dash = slot.dash; else ing.ml = slot.ml;
+    ingredientes.push(ing);
+    detalle.push({ slot, tipo: elegido.tipo, productos: elegido.productos });
+  });
+
+  if (faltan.length) return { plantilla, faltan };
+
+  const base = detalle.find(d => d.tipo.rol === "base") || detalle[0];
+  const distintivo = [...detalle].reverse().find(d =>
+    d !== base && ["pure", "zumo", "licor-dulce", "aperitivo", "dulce", "aroma", "vermut"].includes(d.tipo.rol));
+  const nombre = `${plantilla.nombreCorto} de ${nombreCortoTipo(base.tipo)}` +
+    (distintivo ? ` y ${nombreCortoTipo(distintivo.tipo)}` : "");
+
+  const receta = {
+    id: "propuesta",
+    nombre,
+    vaso: plantilla.vaso,
+    tecnica: plantilla.tecnica,
+    hielo: plantilla.hielo,
+    ingredientes,
+    decoracion: "",
+    pasos: `Fórmula ${plantilla.nombreCorto}: ${plantilla.formula}. Prueba, ajusta el punto dulce/ácido a tu gusto y bautízala.`,
+  };
+  return { plantilla, receta, detalle };
+}
+
+function renderInventar() {
+  const cont = $("#lista-plantillas");
+  cont.innerHTML = PLANTILLAS_CREACION.map(p => `
+    <div class="card plantilla-card">
+      <h4>${p.emoji} ${esc(p.nombre)}</h4>
+      <p class="formula">${esc(p.formula)}</p>
+      <p class="desc">${esc(p.desc)}</p>
+      <p class="meta">Clásicos de esta familia: ${esc(p.ejemplos)}</p>
+      <button class="btn btn-sec btn-mini" data-plantilla="${p.id}">Proponer con mi inventario</button>
+    </div>`).join("");
+  cont.querySelectorAll("[data-plantilla]").forEach(b =>
+    b.addEventListener("click", () => mostrarPropuesta(b.dataset.plantilla)));
+}
+
+function mostrarPropuesta(plantillaId) {
+  const zona = $("#zona-propuesta");
+  if (!estado.inventario.length) {
+    zona.innerHTML = `<div class="aviso">Añade primero productos a tu inventario: el asistente crea cócteles solo con lo que tienes en tu negocio.</div>`;
+    zona.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  const plantilla = plantillaId === "azar"
+    ? PLANTILLAS_CREACION[Math.floor(Math.random() * PLANTILLAS_CREACION.length)]
+    : PLANTILLAS_CREACION.find(p => p.id === plantillaId);
+
+  const prop = generarPropuesta(plantilla);
+  if (prop.faltan) {
+    propuestaActual = null;
+    const roles = prop.faltan.map(s =>
+      `<b>${esc(s.nombre)}</b> (${s.rol.map(r => ROLES[r].toLowerCase()).join(" o ")})`).join(", ");
+    zona.innerHTML = `
+      <h3>${plantilla.emoji} ${esc(plantilla.nombre)}</h3>
+      <div class="aviso">A tu inventario le falta: ${roles}. Añádelo en «Inventario» y esta familia entera de cócteles se desbloquea.</div>`;
+    zona.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+
+  propuestaActual = prop;
+  const detalleHtml = prop.detalle.map(d => `
+    <div class="ing-linea">
+      <span><span class="tag">${esc(ROLES[d.tipo.rol])}</span> ${esc(d.tipo.nombre)}</span>
+      <span class="meta">tu producto: ${esc(d.productos.join(", "))}</span>
+    </div>`).join("");
+
+  zona.innerHTML = `
+    <h3>${prop.plantilla.emoji} Propuesta: ${esc(prop.receta.nombre)}</h3>
+    <div class="grid">
+      <div>${tarjetaReceta(prop.receta)}</div>
+      <div class="card">
+        <h4>Cómo se construye el equilibrio</h4>
+        <p class="formula">${esc(prop.plantilla.formula)}</p>
+        ${detalleHtml}
+        <div class="fila" style="margin-top:14px">
+          <button class="btn" id="btn-guardar-propuesta">💾 Guardar en mis recetas</button>
+          <button class="btn btn-sec" id="btn-otra-propuesta">🎲 Otra versión</button>
+        </div>
+      </div>
+    </div>`;
+  $("#btn-guardar-propuesta").addEventListener("click", () => {
+    estado.recetasPropias.push({ ...prop.receta, id: "propia-" + Date.now() });
+    guardarEstado();
+    cambiarSeccion("recetas");
+  });
+  $("#btn-otra-propuesta").addEventListener("click", () => mostrarPropuesta(prop.plantilla.id));
+  zona.scrollIntoView({ behavior: "smooth" });
 }
 
 // ---------- Descubrir (¿qué puedo crear?) ----------
@@ -646,6 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activarBotonesQuitar();
   });
   $("#btn-preview").addEventListener("click", vistaPrevia);
+  $("#btn-sorprendeme").addEventListener("click", () => mostrarPropuesta("azar"));
   $("#filtro-recetas").addEventListener("input", renderRecetas);
   $("#filtro-posibles").addEventListener("change", renderRecetas);
   $("#form-ajustes").addEventListener("submit", guardarAjustes);

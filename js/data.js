@@ -52,67 +52,219 @@ const TECNICAS = [
   { id: "ninguna",  nombre: "Sin dilución",       dilucionPct: 0 },
 ];
 
+// ---------- Categorías de producto ----------
+// Taxonomía profesional del inventario: categoría → subcategoría → tipo.
+const CATEGORIAS = [
+  { id: "Destilados",   emoji: "🥃", desc: "La base alcohólica: aporta fuerza y carácter" },
+  { id: "Licores",      emoji: "🍷", desc: "Modificadores: licores, vermuts, aperitivos y espumosos" },
+  { id: "Siropes",      emoji: "🍯", desc: "El dulzor que equilibra la acidez" },
+  { id: "Zumos",        emoji: "🍋", desc: "Acidez y fruta natural" },
+  { id: "Concentrados", emoji: "🥭", desc: "Purés y cremas: sabor intenso y cuerpo" },
+  { id: "Refrescos",    emoji: "🫧", desc: "Alargadores y burbujas" },
+  { id: "Frescos",      emoji: "🌿", desc: "Perecederos, bitters, hierbas y texturas" },
+];
+
 // ---------- Tipos de ingrediente ----------
 // Las recetas referencian estos tipos; el inventario de cada negocio
 // asocia sus botellas/productos concretos a un tipo.
+// rol = papel que cumple en el equilibrio del cóctel (motor de creación):
+//   base · licor-dulce · vermut · aperitivo · espumoso · dulce · acido ·
+//   zumo · pure · textura · alargador · bitter · aroma
 const TIPOS_INGREDIENTE = [
-  // Destilados base
-  { id: "tequila",         nombre: "Tequila",                cat: "Destilados" },
-  { id: "mezcal",          nombre: "Mezcal",                 cat: "Destilados" },
-  { id: "ron-blanco",      nombre: "Ron blanco",             cat: "Destilados" },
-  { id: "ron-oscuro",      nombre: "Ron oscuro / añejo",     cat: "Destilados" },
-  { id: "ron-especiado",   nombre: "Ron especiado",          cat: "Destilados" },
-  { id: "vodka",           nombre: "Vodka",                  cat: "Destilados" },
-  { id: "ginebra",         nombre: "Ginebra",                cat: "Destilados" },
-  { id: "bourbon",         nombre: "Whisky bourbon",         cat: "Destilados" },
-  { id: "whisky-centeno",  nombre: "Whisky de centeno (rye)",cat: "Destilados" },
-  { id: "whisky-escoces",  nombre: "Whisky escocés",         cat: "Destilados" },
-  { id: "brandy",          nombre: "Brandy / Coñac",         cat: "Destilados" },
-  { id: "pisco",           nombre: "Pisco",                  cat: "Destilados" },
-  { id: "cachaca",         nombre: "Cachaça",                cat: "Destilados" },
-  // Licores y aperitivos
-  { id: "triple-sec",      nombre: "Triple sec / Curaçao naranja", cat: "Licores" },
-  { id: "blue-curacao",    nombre: "Blue curaçao",           cat: "Licores" },
-  { id: "licor-cafe",      nombre: "Licor de café",          cat: "Licores" },
-  { id: "licor-melocoton", nombre: "Licor de melocotón",     cat: "Licores" },
-  { id: "licor-coco",      nombre: "Licor de coco",          cat: "Licores" },
-  { id: "amaretto",        nombre: "Amaretto",               cat: "Licores" },
-  { id: "vermut-rojo",     nombre: "Vermut rojo",            cat: "Licores" },
-  { id: "vermut-seco",     nombre: "Vermut seco",            cat: "Licores" },
-  { id: "campari",         nombre: "Campari (bitter rojo)",  cat: "Licores" },
-  { id: "aperol",          nombre: "Aperol",                 cat: "Licores" },
-  { id: "cava-prosecco",   nombre: "Cava / Prosecco",        cat: "Licores" },
-  // Siropes y endulzantes
-  { id: "sirope-simple",   nombre: "Sirope simple (azúcar)", cat: "Siropes" },
-  { id: "granadina",       nombre: "Granadina",              cat: "Siropes" },
-  { id: "sirope-agave",    nombre: "Sirope de agave",        cat: "Siropes" },
-  { id: "orgeat",          nombre: "Orgeat (almendra)",      cat: "Siropes" },
-  { id: "miel",            nombre: "Miel / sirope de miel",  cat: "Siropes" },
+  // Destilados
+  { id: "tequila",         nombre: "Tequila",                cat: "Destilados", sub: "Agave",          rol: "base" },
+  { id: "mezcal",          nombre: "Mezcal",                 cat: "Destilados", sub: "Agave",          rol: "base" },
+  { id: "ron-blanco",      nombre: "Ron blanco",             cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
+  { id: "ron-oscuro",      nombre: "Ron oscuro / añejo",     cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
+  { id: "ron-especiado",   nombre: "Ron especiado",          cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
+  { id: "cachaca",         nombre: "Cachaça",                cat: "Destilados", sub: "Caña de azúcar", rol: "base" },
+  { id: "vodka",           nombre: "Vodka",                  cat: "Destilados", sub: "Grano",          rol: "base" },
+  { id: "bourbon",         nombre: "Whisky bourbon",         cat: "Destilados", sub: "Grano",          rol: "base" },
+  { id: "whisky-centeno",  nombre: "Whisky de centeno (rye)",cat: "Destilados", sub: "Grano",          rol: "base" },
+  { id: "whisky-escoces",  nombre: "Whisky escocés",         cat: "Destilados", sub: "Grano",          rol: "base" },
+  { id: "ginebra",         nombre: "Ginebra",                cat: "Destilados", sub: "Botánicos",      rol: "base" },
+  { id: "brandy",          nombre: "Brandy / Coñac",         cat: "Destilados", sub: "Uva",            rol: "base" },
+  { id: "pisco",           nombre: "Pisco",                  cat: "Destilados", sub: "Uva",            rol: "base" },
+  // Licores
+  { id: "triple-sec",      nombre: "Triple sec / Curaçao naranja", cat: "Licores", sub: "Licores de fruta", rol: "licor-dulce" },
+  { id: "blue-curacao",    nombre: "Blue curaçao",           cat: "Licores", sub: "Licores de fruta",   rol: "licor-dulce" },
+  { id: "licor-melocoton", nombre: "Licor de melocotón",     cat: "Licores", sub: "Licores de fruta",   rol: "licor-dulce" },
+  { id: "licor-coco",      nombre: "Licor de coco",          cat: "Licores", sub: "Licores de fruta",   rol: "licor-dulce" },
+  { id: "licor-sauco",     nombre: "Licor de flor de saúco", cat: "Licores", sub: "Licores de fruta",   rol: "licor-dulce" },
+  { id: "licor-cafe",      nombre: "Licor de café",          cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
+  { id: "amaretto",        nombre: "Amaretto",               cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
+  { id: "licor-hierbas",   nombre: "Licor de hierbas",       cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
+  { id: "vermut-rojo",     nombre: "Vermut rojo",            cat: "Licores", sub: "Vermuts",            rol: "vermut" },
+  { id: "vermut-seco",     nombre: "Vermut seco",            cat: "Licores", sub: "Vermuts",            rol: "vermut" },
+  { id: "campari",         nombre: "Campari (bitter rojo)",  cat: "Licores", sub: "Aperitivos amargos", rol: "aperitivo" },
+  { id: "aperol",          nombre: "Aperol",                 cat: "Licores", sub: "Aperitivos amargos", rol: "aperitivo" },
+  { id: "cava-prosecco",   nombre: "Cava / Prosecco",        cat: "Licores", sub: "Espumosos",          rol: "espumoso" },
+  // Siropes
+  { id: "sirope-simple",   nombre: "Sirope simple (azúcar)", cat: "Siropes", sub: "Básicos",    rol: "dulce" },
+  { id: "sirope-agave",    nombre: "Sirope de agave",        cat: "Siropes", sub: "Básicos",    rol: "dulce" },
+  { id: "miel",            nombre: "Miel / sirope de miel",  cat: "Siropes", sub: "Básicos",    rol: "dulce" },
+  { id: "granadina",       nombre: "Granadina",              cat: "Siropes", sub: "Especiales", rol: "dulce" },
+  { id: "orgeat",          nombre: "Orgeat (almendra)",      cat: "Siropes", sub: "Especiales", rol: "dulce" },
+  { id: "sirope-vainilla", nombre: "Sirope de vainilla",     cat: "Siropes", sub: "Especiales", rol: "dulce" },
+  { id: "sirope-canela",   nombre: "Sirope de canela",       cat: "Siropes", sub: "Especiales", rol: "dulce" },
   // Zumos
-  { id: "zumo-lima",       nombre: "Zumo de lima",           cat: "Zumos" },
-  { id: "zumo-limon",      nombre: "Zumo de limón",          cat: "Zumos" },
-  { id: "zumo-naranja",    nombre: "Zumo de naranja",        cat: "Zumos" },
-  { id: "zumo-pina",       nombre: "Zumo de piña",           cat: "Zumos" },
-  { id: "zumo-arandanos",  nombre: "Zumo de arándanos",      cat: "Zumos" },
-  { id: "zumo-pomelo",     nombre: "Zumo de pomelo",         cat: "Zumos" },
-  { id: "zumo-tomate",     nombre: "Zumo de tomate",         cat: "Zumos" },
+  { id: "zumo-lima",       nombre: "Zumo de lima",           cat: "Zumos", sub: "Cítricos", rol: "acido" },
+  { id: "zumo-limon",      nombre: "Zumo de limón",          cat: "Zumos", sub: "Cítricos", rol: "acido" },
+  { id: "zumo-pomelo",     nombre: "Zumo de pomelo",         cat: "Zumos", sub: "Cítricos", rol: "zumo" },
+  { id: "zumo-naranja",    nombre: "Zumo de naranja",        cat: "Zumos", sub: "Cítricos", rol: "zumo" },
+  { id: "zumo-pina",       nombre: "Zumo de piña",           cat: "Zumos", sub: "Frutas",   rol: "zumo" },
+  { id: "zumo-arandanos",  nombre: "Zumo de arándanos",      cat: "Zumos", sub: "Frutas",   rol: "zumo" },
+  { id: "zumo-manzana",    nombre: "Zumo de manzana",        cat: "Zumos", sub: "Frutas",   rol: "zumo" },
+  { id: "zumo-tomate",     nombre: "Zumo de tomate",         cat: "Zumos", sub: "Frutas",   rol: "zumo" },
   // Concentrados y purés
-  { id: "crema-coco",      nombre: "Crema de coco",          cat: "Concentrados" },
-  { id: "pure-fresa",      nombre: "Puré / concentrado de fresa",   cat: "Concentrados" },
-  { id: "pure-maracuya",   nombre: "Puré / concentrado de maracuyá",cat: "Concentrados" },
-  { id: "pure-mango",      nombre: "Puré / concentrado de mango",   cat: "Concentrados" },
-  // Refrescos y otros
-  { id: "soda",            nombre: "Agua con gas / soda",    cat: "Refrescos" },
-  { id: "tonica",          nombre: "Tónica",                 cat: "Refrescos" },
-  { id: "ginger-beer",     nombre: "Ginger beer",            cat: "Refrescos" },
-  { id: "ginger-ale",      nombre: "Ginger ale",             cat: "Refrescos" },
-  { id: "cola",            nombre: "Refresco de cola",       cat: "Refrescos" },
-  { id: "refresco-pomelo", nombre: "Refresco de pomelo",     cat: "Refrescos" },
-  { id: "espresso",        nombre: "Café espresso",          cat: "Otros" },
-  { id: "clara-huevo",     nombre: "Clara de huevo",         cat: "Otros" },
-  { id: "nata",            nombre: "Nata / crema de leche",  cat: "Otros" },
-  { id: "angostura",       nombre: "Angostura bitters",      cat: "Otros" },
-  { id: "menta",           nombre: "Menta / hierbabuena fresca", cat: "Otros" },
+  { id: "pure-fresa",      nombre: "Puré / concentrado de fresa",    cat: "Concentrados", sub: "Purés de fruta", rol: "pure" },
+  { id: "pure-maracuya",   nombre: "Puré / concentrado de maracuyá", cat: "Concentrados", sub: "Purés de fruta", rol: "pure" },
+  { id: "pure-mango",      nombre: "Puré / concentrado de mango",    cat: "Concentrados", sub: "Purés de fruta", rol: "pure" },
+  { id: "crema-coco",      nombre: "Crema de coco",          cat: "Concentrados", sub: "Cremas", rol: "textura" },
+  // Refrescos y mixers
+  { id: "soda",            nombre: "Agua con gas / soda",    cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  { id: "tonica",          nombre: "Tónica",                 cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  { id: "ginger-beer",     nombre: "Ginger beer",            cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  { id: "ginger-ale",      nombre: "Ginger ale",             cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  { id: "cola",            nombre: "Refresco de cola",       cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  { id: "refresco-pomelo", nombre: "Refresco de pomelo",     cat: "Refrescos", sub: "Carbonatados", rol: "alargador" },
+  // Frescos y otros
+  { id: "espresso",        nombre: "Café espresso",          cat: "Frescos", sub: "Perecederos", rol: "aroma" },
+  { id: "clara-huevo",     nombre: "Clara de huevo",         cat: "Frescos", sub: "Perecederos", rol: "textura" },
+  { id: "nata",            nombre: "Nata / crema de leche",  cat: "Frescos", sub: "Perecederos", rol: "textura" },
+  { id: "menta",           nombre: "Menta / hierbabuena fresca", cat: "Frescos", sub: "Hierbas", rol: "aroma" },
+  { id: "angostura",       nombre: "Angostura bitters",      cat: "Frescos", sub: "Bitters",    rol: "bitter" },
+];
+
+// Nombre legible de cada rol (para el asistente de creación)
+const ROLES = {
+  "base":        "Base alcohólica",
+  "licor-dulce": "Licor dulce",
+  "vermut":      "Vermut",
+  "aperitivo":   "Aperitivo amargo",
+  "espumoso":    "Espumoso",
+  "dulce":       "Sirope / dulce",
+  "acido":       "Ácido cítrico",
+  "zumo":        "Zumo de fruta",
+  "pure":        "Puré / concentrado",
+  "textura":     "Textura / cremosidad",
+  "alargador":   "Alargador con burbuja",
+  "bitter":      "Bitters",
+  "aroma":       "Aromático",
+};
+
+// ---------- Plantillas de creación (las "reglas de oro") ----------
+// Fórmulas clásicas con las que los bartenders construyen cócteles nuevos.
+// Cada slot define qué rol debe cumplir el ingrediente y cuánto lleva.
+const PLANTILLAS_CREACION = [
+  {
+    id: "sour", nombreCorto: "Sour", emoji: "🍋",
+    nombre: "Sour — La regla de oro 2:1:1",
+    formula: "2 partes de base · 1 parte de ácido · 1 parte de dulce",
+    desc: "La fórmula madre de la coctelería: el dulce equilibra el ácido y la base aporta carácter. Si dominas esta proporción, puedes crear un cóctel con casi cualquier destilado y fruta.",
+    ejemplos: "Margarita, Daiquiri, Whisky Sour, Pisco Sour",
+    vaso: "coupe", tecnica: "agitado", hielo: "sin-hielo",
+    slots: [
+      { rol: ["base"],                 ml: 60, nombre: "Destilado base" },
+      { rol: ["acido"],                ml: 30, nombre: "Ácido cítrico" },
+      { rol: ["dulce", "licor-dulce"], ml: 25, nombre: "Dulce (sirope o licor)" },
+      { rol: ["textura"],              ml: 20, nombre: "Espuma (clara/nata)", opcional: true },
+    ],
+  },
+  {
+    id: "highball", nombreCorto: "Highball", emoji: "🫧",
+    nombre: "Highball — Refrescante 1:3",
+    formula: "1 parte de base · 3 partes de alargador",
+    desc: "Sencillo y rentable: un destilado alargado con burbuja. El secreto está en el hielo abundante y en no romper el gas al remover.",
+    ejemplos: "Gin Tonic, Cuba Libre, Paloma, Moscow Mule",
+    vaso: "highball", tecnica: "directo", hielo: "cubos",
+    slots: [
+      { rol: ["base"],                  ml: 50,  nombre: "Destilado base" },
+      { rol: ["alargador"],             ml: 150, nombre: "Alargador con burbuja" },
+      { rol: ["acido"],                 ml: 10,  nombre: "Toque cítrico", opcional: true },
+    ],
+  },
+  {
+    id: "ancestral", nombreCorto: "Ancestral", emoji: "🥃",
+    nombre: "Ancestral — Espirituoso",
+    formula: "1 base protagonista · pizca de dulce · bitters",
+    desc: "El cóctel en su forma más pura: destilado, un punto de azúcar y amargos. Para clientes que quieren saborear el licor. Hielo grande y dilución lenta.",
+    ejemplos: "Old Fashioned, Sazerac",
+    vaso: "rocks", tecnica: "removido", hielo: "bloque",
+    slots: [
+      { rol: ["base"],                 ml: 60, nombre: "Destilado protagonista" },
+      { rol: ["dulce", "licor-dulce"], ml: 10, nombre: "Dulzor sutil" },
+      { rol: ["bitter"],               dash: 2, nombre: "Bitters" },
+    ],
+  },
+  {
+    id: "martini", nombreCorto: "Martini", emoji: "🍸",
+    nombre: "Estilo Martini — Elegante",
+    formula: "2-3 partes de base · 1 parte de vermut o aperitivo",
+    desc: "Base + vino fortificado o aperitivo, removido y muy frío. Cambiando el modificador nacen familias enteras: seco, perfecto, negroni a partes iguales…",
+    ejemplos: "Dry Martini, Manhattan, Negroni",
+    vaso: "martini", tecnica: "removido", hielo: "sin-hielo",
+    slots: [
+      { rol: ["base"],                              ml: 60, nombre: "Destilado base" },
+      { rol: ["vermut", "aperitivo", "licor-dulce"],ml: 25, nombre: "Modificador" },
+      { rol: ["bitter"],                            dash: 1, nombre: "Bitters", opcional: true },
+    ],
+  },
+  {
+    id: "spritz", nombreCorto: "Spritz", emoji: "🍹",
+    nombre: "Spritz — Aperitivo 3:2:1",
+    formula: "3 partes de aperitivo · 2 de espumoso · 1 de soda",
+    desc: "Ligero, de baja graduación y muy visual. Ideal para terraza y para dar salida a aperitivos y espumosos.",
+    ejemplos: "Aperol Spritz, Campari Spritz, Hugo (con licor de saúco)",
+    vaso: "vino", tecnica: "directo", hielo: "cubos",
+    slots: [
+      { rol: ["aperitivo", "licor-dulce"], ml: 60, nombre: "Aperitivo / licor" },
+      { rol: ["espumoso"],                 ml: 90, nombre: "Espumoso" },
+      { rol: ["alargador"],                ml: 30, nombre: "Soda" },
+    ],
+  },
+  {
+    id: "tiki", nombreCorto: "Tiki", emoji: "🗿",
+    nombre: "Tiki — Tropical complejo",
+    formula: "base partida en dos · ácido · sirope · fruta",
+    desc: "Capas de sabor: dos bases (o base + licor), cítrico, un sirope con personalidad y fruta. Servido sobre hielo picado con decoración generosa.",
+    ejemplos: "Mai Tai, Zombie, Jungle Bird",
+    vaso: "tiki", tecnica: "agitado", hielo: "picado",
+    slots: [
+      { rol: ["base"],                 ml: 40, nombre: "Base principal" },
+      { rol: ["base", "licor-dulce"],  ml: 20, nombre: "Segunda base o licor" },
+      { rol: ["acido"],                ml: 25, nombre: "Ácido cítrico" },
+      { rol: ["dulce"],                ml: 15, nombre: "Sirope con carácter" },
+      { rol: ["zumo", "pure"],         ml: 40, nombre: "Fruta" },
+    ],
+  },
+  {
+    id: "frozen", nombreCorto: "Frozen", emoji: "🥥",
+    nombre: "Frozen / Cremoso",
+    formula: "base · textura cremosa · fruta — todo batido",
+    desc: "Batido con hielo hasta textura de granizado. La crema o clara da cuerpo; la fruta, el sabor. Perfecto para playa y carta de verano.",
+    ejemplos: "Piña Colada, Daiquiri frozen de fresa",
+    vaso: "hurricane", tecnica: "batido", hielo: "frappe",
+    slots: [
+      { rol: ["base"],          ml: 50, nombre: "Destilado base" },
+      { rol: ["textura"],       ml: 30, nombre: "Cuerpo cremoso" },
+      { rol: ["zumo", "pure"],  ml: 90, nombre: "Fruta" },
+    ],
+  },
+  {
+    id: "fruta-moderna", nombreCorto: "Sour de fruta", emoji: "🥭",
+    nombre: "Sour de fruta — Firma de la casa",
+    formula: "sour 2:1:1 + puré de fruta intenso",
+    desc: "La forma más fácil de crear un cóctel de autor: toma la regla de oro del sour y súmale un puré o concentrado. Cada fruta nueva de tu inventario es un cóctel nuevo en la carta.",
+    ejemplos: "Margarita de maracuyá, Daiquiri de fresa, Mango Sour",
+    vaso: "margarita", tecnica: "agitado", hielo: "cubos",
+    slots: [
+      { rol: ["base"],                 ml: 50, nombre: "Destilado base" },
+      { rol: ["licor-dulce", "dulce"], ml: 20, nombre: "Dulce" },
+      { rol: ["acido"],                ml: 25, nombre: "Ácido cítrico" },
+      { rol: ["pure"],                 ml: 30, nombre: "Puré / concentrado" },
+    ],
+  },
 ];
 
 // ---------- Recetario clásico de referencia ----------
