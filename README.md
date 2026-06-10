@@ -94,6 +94,22 @@ Toda receta batida muestra el panel **«Control frozen»**: % real de alcohol en
 - Cada oferta muestra ingreso, coste de producción, margen por venta y **semáforo de rentabilidad**: verde (coste ≤ 35 %), ámbar (≤ 50 %, para horas valle), rojo (pierdes margen).
 - Sugerencias automáticas según tu margen: descuento máximo que aguanta el 35 % de coste, coste real de un 2×1 y los cócteles más baratos de producir (ideales para 2×1).
 
+### 👨‍🍳 Dos capas: modo máster y modo barra
+Pensado para el modelo real de un local: **el dueño (máster) crea y controla todo; el bartender solo ejecuta**.
+
+- **Modo máster** 🔓: acceso completo — barra, inventario, costes, recetas, ofertas, ajustes.
+- **Modo barra** 🔒: la app queda bloqueada como **guía de aprendizaje** para el equipo. Solo se ven las recetas, **sin costes, sin precios y sin botones de edición**. Nada se puede modificar.
+- El cambio se hace con un botón en la cabecera; volver al modo máster exige el **PIN** que el dueño configura en Ajustes. (Es un bloqueo de uso en barra, no un sistema de seguridad: los datos viven en el navegador.)
+
+### 📋 Ficha de preparación (estación del bartender)
+Cada receta tiene el botón **«Ficha de preparación»**: una ficha a pantalla completa, con letra grande, pensada para aprender y ejecutar en barra:
+
+1. Vaso (con la capacidad real del local y si hay que enfriarlo)
+2. Hielo (tipo y ml que debe ocupar)
+3. Medidas exactas en orden — en los chupitos de capas, **en orden de densidad**, y con la **marca obligatoria** si el máster la fijó
+4. Elaboración con tiempos (agitar 12-15 s, remover 20-30 s, gramos de hielo si es frozen…)
+5. Decoración y servicio, más la nota del máster
+
 ### ⚙️ Ajustes y multi-establecimiento
 - % de llenado del vaso, margen de beneficio, moneda y dilución por técnica (agitado, removido, directo, batido).
 - **Exportar / importar la configuración completa** en JSON: la central define vasos, hielos, recetas e inventario y la distribuye a todos sus locales para que todos sirvan exactamente igual.

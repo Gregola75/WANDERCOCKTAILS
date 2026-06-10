@@ -20,6 +20,8 @@ let estado = {
   inventario: [],       // [{id, nombre, tipo, precio, cantidad, unidad: "ml"|"ud"}]
   recetasPropias: [],   // recetas creadas por el negocio (mismo formato que las clásicas)
   ofertas: [],          // [{id, nombre, recetaId, recetaId2, tipo: "2x1"|"descuento"|"precio"|"combo", valor}]
+  pinMaster: "",        // PIN del máster: protege la vuelta desde el modo barra
+  modo: "master",       // "master" (dueño: edita todo) | "barra" (bartender: solo guía)
 };
 
 function cargarEstado() {
@@ -54,6 +56,7 @@ function fmtDinero(n) {
 function todasRecetas() {
   return RECETAS_CLASICAS.concat(RECETAS_SHOTS, estado.recetasPropias);
 }
+const esModoBarra = () => estado.modo === "barra";
 function recetaPorId(id) {
   return todasRecetas().find(r => r.id === id);
 }
@@ -196,6 +199,7 @@ function analizarDisponibilidad(receta) {
 // =========================================================
 
 function cambiarSeccion(id) {
+  if (esModoBarra()) id = "recetas"; // en modo barra solo existe la guía de recetas
   $$("nav button").forEach(b => b.classList.toggle("activo", b.dataset.sec === id));
   $$(".seccion").forEach(s => s.classList.toggle("activa", s.id === "sec-" + id));
   if (id === "barra") renderBarra();
@@ -566,6 +570,7 @@ function panelFrozen(receta, escalada) {
 
 // ---------- Recetas ----------
 function tarjetaReceta(receta, opciones = {}) {
+  const barra = esModoBarra(); // modo bartender: guía sin costes ni edición
   const e = escalarReceta(receta);
   const c = costeReceta(e);
   const disp = analizarDisponibilidad(receta);
@@ -592,7 +597,7 @@ function tarjetaReceta(receta, opciones = {}) {
   }
 
   const precioSugerido = c.total * estado.margen;
-  const costeHtml = c.completo
+  const costeHtml = barra ? "" : c.completo
     ? `<div class="coste">${fmtDinero(c.total)}</div>`
     : `<div class="coste" title="Faltan precios de: ${esc(c.faltantes.join(", "))}">${c.total > 0 ? "≥ " + fmtDinero(c.total) : "—"}</div>`;
 
@@ -620,16 +625,112 @@ function tarjetaReceta(receta, opciones = {}) {
       <p class="meta">
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
         ${e.despPct ? `+ hielo (vaso lleno al ${estado.llenadoPct} %)` : `(${estado.llenadoPct} % del vaso)`}
-        ${c.completo ? ` · Precio sugerido (coste × ${estado.margen}): <b>${fmtDinero(precioSugerido)}</b> · Coste = ${precioSugerido > 0 ? Math.round(c.total / precioSugerido * 100) : 0}% del PVP` : ""}
+        ${!barra && c.completo ? ` · Precio sugerido (coste × ${estado.margen}): <b>${fmtDinero(precioSugerido)}</b> · Coste = ${precioSugerido > 0 ? Math.round(c.total / precioSugerido * 100) : 0}% del PVP` : ""}
       </p>
       ${receta.decoracion ? `<p class="meta">🍋 ${esc(receta.decoracion)}</p>` : ""}
       ${receta.pasos ? `<p class="pasos">${esc(receta.pasos)}</p>` : ""}
       <div>${dispTag}</div>
       <div class="fila">
-        ${opciones.editable !== false && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-personalizar="${receta.id}">🛠 ${opciones.propia ? "Editar" : "Personalizar con mis marcas"}</button>` : ""}
-        ${opciones.propia ? `<button class="btn btn-peligro btn-mini" data-borrar-receta="${receta.id}">Eliminar</button>` : ""}
+        ${recetaPorId(receta.id) ? `<button class="btn btn-mini" data-ficha="${receta.id}">👨‍🍳 Ficha de preparación</button>` : ""}
+        ${!barra && opciones.editable !== false && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-personalizar="${receta.id}">🛠 ${opciones.propia ? "Editar" : "Personalizar con mis marcas"}</button>` : ""}
+        ${!barra && opciones.propia ? `<button class="btn btn-peligro btn-mini" data-borrar-receta="${receta.id}">Eliminar</button>` : ""}
       </div>
     </div>`;
+}
+
+// ---------- Ficha de preparación (estación del bartender) ----------
+// Guía paso a paso en grande para aprender y ejecutar el trago igual siempre.
+const TEXTO_TECNICA = {
+  agitado: "Agita fuerte con hielo 12-15 segundos, hasta que la coctelera escarche por fuera. Cuela al servir.",
+  removido: "Remueve con hielo en vaso mezclador 20-30 segundos, con suavidad. Cuela al servir.",
+  directo: "Construye los ingredientes directamente en el vaso y remueve suavemente de abajo arriba.",
+  batido: "Bate a máxima potencia hasta textura de granizado fino, sin pasarte (batir de más calienta y agua).",
+  "batido-helado": "Bate con el helado SIN hielo, poco tiempo y a máxima potencia. Todo muy frío.",
+  capas: "Vierte cada capa muy despacio sobre el dorso de una cucharilla apoyada en la pared del vaso.",
+  ninguna: "Sirve directamente.",
+};
+
+function abrirFicha(recetaId) {
+  const receta = recetaPorId(recetaId);
+  if (!receta) return;
+  const e = escalarReceta(receta);
+  const vaso = vasoPorId(e.vasoUsado);
+  const hielo = hieloPorId(e.hieloUsado);
+  const tecnica = tecnicaPorId(receta.tecnica);
+
+  // Para los chupitos en capas, los ingredientes van en orden de densidad
+  const orden = receta.tecnica === "capas"
+    ? [...e.ingredientes].sort((a, b) => densidadTipo(b.tipo) - densidadTipo(a.tipo))
+    : e.ingredientes;
+  const listaIngs = orden.map(i => {
+    let marca = "";
+    if (i.marca) {
+      const item = estado.inventario.find(x => x.id === i.marca);
+      if (item) marca = ` — usa <b>${esc(item.nombre)}</b>`;
+    }
+    return `<li><b>${i.texto}</b> de ${esc(i.nombreTipo)}${marca}</li>`;
+  }).join("");
+
+  let pasoTecnica = TEXTO_TECNICA[receta.tecnica] || "";
+  if (receta.tecnica === "batido") {
+    const liquido = e.ingredientes.reduce((s, i) => s + (i.mlFinal || 0), 0);
+    pasoTecnica = `Añade ~${Math.round(liquido * 1.7)} g de hielo (1,7× el líquido). ` + pasoTecnica;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "ficha-overlay";
+  overlay.innerHTML = `
+    <div class="ficha">
+      <button class="ficha-cerrar" title="Cerrar">✕</button>
+      <h2>${esc(receta.nombre)}</h2>
+      <p class="meta">${esc(vaso.nombre)} · ${e.capacidad} ml · ${esc(tecnica.nombre)}</p>
+      <ol class="ficha-pasos">
+        <li><b>Vaso:</b> ${esc(vaso.nombre)} de ${e.capacidad} ml.${receta.hielo === "sin-hielo" ? " Enfríalo antes (hielo y agua, o congelador)." : ""}</li>
+        <li><b>Hielo:</b> ${receta.hielo === "sin-hielo" ? "se sirve sin hielo (el frío se consigue al elaborar)." : esc(hielo.nombre.toLowerCase()) + ` hasta ocupar ~${Math.round(e.hieloMl)} ml del vaso.`}</li>
+        <li><b>Mide e incorpora${receta.tecnica === "capas" ? " EN ESTE ORDEN (capas, el más denso primero)" : ""}:</b>
+          <ul>${listaIngs}</ul>
+        </li>
+        <li><b>Elabora:</b> ${esc(pasoTecnica)}</li>
+        ${receta.decoracion ? `<li><b>Decora y sirve:</b> ${esc(receta.decoracion)}.</li>` : `<li><b>Sirve</b> inmediatamente.</li>`}
+      </ol>
+      ${receta.pasos ? `<p class="pasos">📋 Nota del máster: ${esc(receta.pasos)}</p>` : ""}
+      <p class="meta">Volumen final: ${Math.round(e.volFinal)} ml de líquido · Dilución ${e.dilucionPct} % · Sigue la ficha al milímetro: el cliente debe recibir siempre el mismo cóctel.</p>
+    </div>`;
+  overlay.addEventListener("click", ev => {
+    if (ev.target === overlay || ev.target.classList.contains("ficha-cerrar")) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+}
+
+// ---------- Modo máster / modo barra ----------
+function aplicarModo() {
+  const barra = esModoBarra();
+  document.body.classList.toggle("modo-barra", barra);
+  $("#btn-modo").textContent = barra ? "🔒 Modo barra — soy el máster" : "🔓 Modo máster — bloquear para el equipo";
+  $("#badge-modo").textContent = barra ? "MODO BARRA · solo guía" : "";
+  if (barra) {
+    cambiarSeccion("recetas");
+  } else {
+    renderRecetas();
+  }
+}
+
+function toggleModo() {
+  if (esModoBarra()) {
+    const pin = prompt("PIN de máster para desbloquear:");
+    if (pin === null) return;
+    if (pin !== estado.pinMaster) { alert("PIN incorrecto."); return; }
+    estado.modo = "master";
+  } else {
+    if (!estado.pinMaster) {
+      const pin = prompt("Crea un PIN de máster (mínimo 4 caracteres).\nSe pedirá para volver del modo barra al modo máster:");
+      if (!pin || pin.trim().length < 4) { alert("PIN no válido: necesita al menos 4 caracteres."); return; }
+      estado.pinMaster = pin.trim();
+    }
+    estado.modo = "barra";
+  }
+  guardarEstado();
+  aplicarModo();
 }
 
 function renderRecetas() {
@@ -1239,6 +1340,8 @@ function guardarOferta(ev) {
 
 // ---------- Ajustes ----------
 function renderAjustes() {
+  $("#aj-pin").value = "";
+  $("#aj-pin").placeholder = estado.pinMaster ? "PIN configurado ✓ (escribe para cambiarlo)" : "Sin PIN: crea uno";
   $("#aj-nombre").value = estado.nombreNegocio;
   $("#aj-llenado").value = estado.llenadoPct;
   $("#aj-margen").value = estado.margen;
@@ -1268,6 +1371,12 @@ function guardarAjustes(ev) {
   const moneda = $("#aj-moneda").value.trim();
   if (moneda) estado.moneda = moneda;
   if (margen > 0) estado.margen = margen;
+  const pin = $("#aj-pin").value.trim();
+  if (pin) {
+    if (pin.length < 4) { alert("El PIN necesita al menos 4 caracteres."); return; }
+    estado.pinMaster = pin;
+    $("#aj-pin").value = "";
+  }
   guardarEstado();
   $("#aj-guardado").textContent = "✓ Ajustes guardados";
   setTimeout(() => $("#aj-guardado").textContent = "", 2000);
@@ -1293,6 +1402,7 @@ function importarDatos(ev) {
       estado = Object.assign(estado, datos);
       guardarEstado();
       actualizarCabecera();
+      aplicarModo();
       cambiarSeccion("barra");
       alert("Configuración importada correctamente.");
     } catch (e) {
@@ -1329,19 +1439,23 @@ document.addEventListener("DOMContentLoaded", () => {
       row.querySelector(".ing-marca").innerHTML = opcionesMarcaHtml(ev.target.value, "");
     }
   });
-  // Personalizar clásicos / editar y borrar recetas propias (delegado)
+  // Ficha de preparación, personalizar clásicos y borrar propias (delegado)
   document.addEventListener("click", ev => {
+    const f = ev.target.closest("[data-ficha]");
+    if (f) { abrirFicha(f.dataset.ficha); return; }
     const p = ev.target.closest("[data-personalizar]");
-    if (p) { cargarEnEditor(p.dataset.personalizar); return; }
+    if (p) { if (!esModoBarra()) cargarEnEditor(p.dataset.personalizar); return; }
     const b = ev.target.closest("[data-borrar-receta]");
-    if (b) {
+    if (b && !esModoBarra()) {
       if (!confirm("¿Eliminar esta receta propia?")) return;
       estado.recetasPropias = estado.recetasPropias.filter(r => r.id !== b.dataset.borrarReceta);
       guardarEstado(); renderRecetas();
     }
   });
+  $("#btn-modo").addEventListener("click", toggleModo);
   $("#form-oferta").addEventListener("submit", guardarOferta);
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
+  aplicarModo();
   $("#btn-preview").addEventListener("click", vistaPrevia);
   // Vista previa en vivo: el indicador de sabor se actualiza mientras escribes
   let temporizadorPreview = null;

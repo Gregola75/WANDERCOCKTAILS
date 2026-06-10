@@ -9,7 +9,10 @@
 <body>
 
 <header>
-  <h1>🍸 WANDER<span>COCKTAILS</span><span id="nombre-negocio" style="font-size:.9rem"></span></h1>
+  <div class="cabecera-app">
+    <h1>🍸 WANDER<span>COCKTAILS</span><span id="nombre-negocio" style="font-size:.9rem"></span> <span id="badge-modo" class="badge-modo"></span></h1>
+    <button class="btn btn-sec btn-mini" id="btn-modo">🔓 Modo máster</button>
+  </div>
   <p>El mismo cóctel, en cualquier establecimiento: configura tu cristalería y tu hielo, y las recetas se ajustan solas. Controla costes y descubre qué puedes crear con tu inventario.</p>
   <nav>
     <button data-sec="barra" class="activo">🥃 Mi barra</button>
@@ -271,7 +274,12 @@
           <label>Moneda</label>
           <input type="text" id="aj-moneda" maxlength="4" style="width:60px">
         </div>
+        <div class="campo">
+          <label>PIN de máster (protege el modo barra)</label>
+          <input type="password" id="aj-pin" maxlength="20" style="width:200px" autocomplete="new-password">
+        </div>
       </div>
+      <p class="sub">Con el botón «Bloquear para el equipo» (arriba), la app pasa a <b>modo barra</b>: tu bartender solo ve las recetas como guía paso a paso — sin costes, sin precios y sin poder modificar nada. Para volver al modo máster se pide el PIN.</p>
 
       <h3>Dilución por técnica</h3>
       <p class="sub">Agua que se incorpora al cóctel al elaborarlo (% sobre los ingredientes). Ajústala a tu hielo y tiempos de agitado/removido.</p>
