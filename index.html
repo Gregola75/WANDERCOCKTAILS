@@ -18,6 +18,7 @@
     <button data-sec="crear">✨ Crear receta</button>
     <button data-sec="inventar">🧪 Inventar</button>
     <button data-sec="descubrir">🔍 ¿Qué puedo crear?</button>
+    <button data-sec="ofertas">💰 Ofertas</button>
     <button data-sec="ajustes">⚙️ Ajustes</button>
   </nav>
 </header>
@@ -115,12 +116,17 @@
       <h3>Clásicos</h3>
     </div>
     <div class="grid" id="lista-recetas"></div>
+
+    <h3>🔥 Carta de chupitos — los mejores shots del mundo</h3>
+    <p class="sub">Escalados a tu caballito real. En los de capas, la app calcula el orden de vertido por densidad (el más dulce abajo). Personalízalos con tus marcas igual que los cócteles.</p>
+    <div class="grid" id="lista-shots"></div>
   </section>
 
   <!-- ========== CREAR RECETA ========== -->
   <section id="sec-crear" class="seccion">
     <h2>Crear nueva receta</h2>
-    <p class="sub">Diseña tus propias creaciones. Introduce las medidas de tu receta base y la app la estandarizará igual que los clásicos: se escalará al vaso y hielo de cualquier configuración.</p>
+    <p class="sub">Diseña tus propias creaciones o personaliza un clásico con las marcas de tu casa (botón «Personalizar» en cualquier receta). Cada ingrediente puede fijar una marca concreta de tu inventario; si no, se usa la más económica para el coste.</p>
+    <p class="formula" id="aviso-edicion"></p>
 
     <form id="form-receta" class="form-receta">
       <div class="fila">
@@ -179,6 +185,50 @@
 
     <h3>🛒 Te falta solo un ingrediente</h3>
     <div class="grid" id="lista-casi"></div>
+  </section>
+
+  <!-- ========== OFERTAS ========== -->
+  <section id="sec-ofertas" class="seccion">
+    <h2>Ofertas y promociones rentables</h2>
+    <p class="sub">Una oferta sin conocer el coste es una apuesta a ciegas. Aquí cada promoción se calcula sobre tu coste real de producción y un semáforo te dice si sigue siendo rentable: verde (coste ≤ 35 % del ingreso), ámbar (hasta 50 %, válida para llenar horas valle) o rojo (pierdes margen).</p>
+    <div class="kpis" id="of-sugerencias"></div>
+
+    <form id="form-oferta" class="form-receta">
+      <div class="fila">
+        <div class="campo">
+          <label>Tipo de oferta</label>
+          <select id="of-tipo">
+            <option value="2x1">2×1 (dos al precio de uno)</option>
+            <option value="descuento">Happy hour (% de descuento)</option>
+            <option value="precio">Precio cerrado</option>
+            <option value="combo">Combo de 2 cócteles</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Cóctel</label>
+          <select id="of-receta"></select>
+        </div>
+        <div class="campo" id="of-receta2-campo" style="display:none">
+          <label>Segundo cóctel (combo)</label>
+          <select id="of-receta2"></select>
+        </div>
+        <div class="campo" id="of-valor-campo">
+          <label id="of-valor-label">% de descuento</label>
+          <input type="number" id="of-valor" min="0" step="0.5" placeholder="20">
+        </div>
+        <div class="campo">
+          <label>Nombre de la oferta (opcional)</label>
+          <input type="text" id="of-nombre" placeholder="Ej: Happy hour terraza" style="width:200px">
+        </div>
+        <div class="campo">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn">+ Crear oferta</button>
+        </div>
+      </div>
+    </form>
+
+    <h3>Mis ofertas activas</h3>
+    <div class="grid" id="lista-ofertas"></div>
   </section>
 
   <!-- ========== AJUSTES ========== -->

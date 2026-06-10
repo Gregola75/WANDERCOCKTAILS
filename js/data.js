@@ -49,6 +49,7 @@ const TECNICAS = [
   { id: "removido", nombre: "Removido (stir)",    dilucionPct: 15 },
   { id: "directo",  nombre: "Directo en vaso (build)", dilucionPct: 5 },
   { id: "batido",   nombre: "Batido / Frozen (blend)", dilucionPct: 45 },
+  { id: "capas",    nombre: "En capas (pousse-café)",  dilucionPct: 0 },
   { id: "ninguna",  nombre: "Sin dilución",       dilucionPct: 0 },
 ];
 
@@ -94,6 +95,8 @@ const TIPOS_INGREDIENTE = [
   { id: "licor-cafe",      nombre: "Licor de café",          cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
   { id: "amaretto",        nombre: "Amaretto",               cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
   { id: "licor-hierbas",   nombre: "Licor de hierbas",       cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
+  { id: "crema-irlandesa", nombre: "Crema irlandesa (tipo Baileys)", cat: "Licores", sub: "Licores dulces", rol: "licor-dulce" },
+  { id: "licor-menta",     nombre: "Crema de menta (verde)", cat: "Licores", sub: "Licores dulces",     rol: "licor-dulce" },
   { id: "vermut-rojo",     nombre: "Vermut rojo",            cat: "Licores", sub: "Vermuts",            rol: "vermut" },
   { id: "vermut-seco",     nombre: "Vermut seco",            cat: "Licores", sub: "Vermuts",            rol: "vermut" },
   { id: "campari",         nombre: "Campari (bitter rojo)",  cat: "Licores", sub: "Aperitivos amargos", rol: "aperitivo" },
@@ -249,6 +252,32 @@ const PLANTILLAS_CREACION = [
       { rol: ["base"],          ml: 50, nombre: "Destilado base" },
       { rol: ["textura"],       ml: 30, nombre: "Cuerpo cremoso" },
       { rol: ["zumo", "pure"],  ml: 90, nombre: "Fruta" },
+    ],
+  },
+  {
+    id: "shot-capas", nombreCorto: "Chupito en capas", emoji: "🌈",
+    nombre: "Chupito en capas — Pousse-café",
+    formula: "3 capas: el más denso abajo, el más seco arriba",
+    desc: "Espectáculo puro en barra: licores vertidos por orden de densidad (más azúcar = más denso = abajo). La app calcula el orden de vertido automáticamente.",
+    ejemplos: "B-52, Baby Guinness, Bandera Mexicana",
+    vaso: "shot", tecnica: "capas", hielo: "sin-hielo",
+    slots: [
+      { rol: ["dulce"],                 ml: 15, nombre: "Capa densa (sirope/granadina)" },
+      { rol: ["licor-dulce"],           ml: 15, nombre: "Capa media (licor)" },
+      { rol: ["base", "licor-dulce"],   ml: 15, nombre: "Capa superior (destilado o licor seco)" },
+    ],
+  },
+  {
+    id: "shot-citrico", nombreCorto: "Chupito cítrico", emoji: "⚡",
+    nombre: "Chupito cítrico — Mini sour",
+    formula: "la regla de oro en 45 ml: base + cítrico + dulce, agitado",
+    desc: "Un sour concentrado en un trago: se agita con hielo, se cuela fino y entra frío y equilibrado. La fórmula del Kamikaze y el Lemon Drop.",
+    ejemplos: "Kamikaze, Lemon Drop",
+    vaso: "shot", tecnica: "agitado", hielo: "sin-hielo",
+    slots: [
+      { rol: ["base"],                 ml: 22, nombre: "Destilado base" },
+      { rol: ["acido"],                ml: 13, nombre: "Cítrico" },
+      { rol: ["dulce", "licor-dulce"], ml: 10, nombre: "Dulce" },
     ],
   },
   {
@@ -457,6 +486,93 @@ const RECETAS_CLASICAS = [
   },
 ];
 
+// ---------- Carta de chupitos (los shots más famosos del mundo) ----------
+// Referenciados al vaso shot del catálogo (50 ml); se escalan al caballito
+// real de cada negocio. Los de capas se vierten por orden de densidad.
+const RECETAS_SHOTS = [
+  {
+    id: "b52", nombre: "B-52", vaso: "shot", tecnica: "capas", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "licor-cafe", ml: 15 }, { tipo: "crema-irlandesa", ml: 15 }, { tipo: "triple-sec", ml: 15 },
+    ],
+    decoracion: "Se puede flamear la capa superior unos segundos",
+    pasos: "Verter por capas sobre el dorso de una cuchara, sin mezclar.",
+  },
+  {
+    id: "baby-guinness", nombre: "Baby Guinness", vaso: "shot", tecnica: "capas", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "licor-cafe", ml: 30 }, { tipo: "crema-irlandesa", ml: 15 },
+    ],
+    decoracion: "Parece una Guinness en miniatura: 'espuma' de crema",
+    pasos: "Café abajo y una capa fina de crema irlandesa por encima, vertida sobre cuchara.",
+  },
+  {
+    id: "kamikaze", nombre: "Kamikaze", vaso: "shot", tecnica: "agitado", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "vodka", ml: 20 }, { tipo: "triple-sec", ml: 13 }, { tipo: "zumo-lima", ml: 12 },
+    ],
+    decoracion: "Gajo de lima",
+    pasos: "Agitar con hielo y colar fino en el caballito.",
+  },
+  {
+    id: "lemon-drop", nombre: "Lemon Drop", vaso: "shot", tecnica: "agitado", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "vodka", ml: 22 }, { tipo: "zumo-limon", ml: 13 }, { tipo: "sirope-simple", ml: 10 },
+    ],
+    decoracion: "Borde de azúcar y piel de limón",
+    pasos: "Agitar con hielo, colar y servir con el borde escarchado de azúcar.",
+  },
+  {
+    id: "cerebrito", nombre: "Cerebrito (Brain)", vaso: "shot", tecnica: "capas", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "licor-melocoton", ml: 25 }, { tipo: "crema-irlandesa", ml: 15 }, { tipo: "granadina", ml: 5 },
+    ],
+    decoracion: "La granadina 'rompe' la crema y forma el cerebro",
+    pasos: "Melocotón de base, crema irlandesa vertida despacio y unas gotas de granadina al final.",
+  },
+  {
+    id: "bandera-mexicana", nombre: "Bandera Mexicana", vaso: "shot", tecnica: "capas", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "granadina", ml: 15 }, { tipo: "zumo-lima", ml: 15 }, { tipo: "tequila", ml: 15 },
+    ],
+    decoracion: "Tres capas: rojo, verde lima y blanco",
+    pasos: "Granadina abajo, lima en medio y tequila arriba, siempre sobre cuchara.",
+  },
+  {
+    id: "tequila-clasico", nombre: "Tequila Clásico", vaso: "shot", tecnica: "directo", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "tequila", ml: 45 },
+    ],
+    decoracion: "Sal y gajo de lima",
+    pasos: "El ritual: sal en la mano, tequila de un trago y lima al final.",
+  },
+  {
+    id: "cucaracha", nombre: "Cucaracha", vaso: "shot", tecnica: "directo", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "licor-cafe", ml: 22 }, { tipo: "tequila", ml: 23 },
+    ],
+    decoracion: "Tradicionalmente se flamea (con mucho cuidado)",
+    pasos: "Construir en el caballito. Si se flamea, apagar antes de beber y avisar al cliente.",
+  },
+  {
+    id: "beach-shot", nombre: "Sex on the Beach Shot", vaso: "shot", tecnica: "agitado", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "vodka", ml: 15 }, { tipo: "licor-melocoton", ml: 10 },
+      { tipo: "zumo-naranja", ml: 10 }, { tipo: "zumo-arandanos", ml: 10 },
+    ],
+    decoracion: "Media cereza",
+    pasos: "Agitar con hielo y colar fino.",
+  },
+  {
+    id: "menta-polar", nombre: "Beso Polar", vaso: "shot", tecnica: "capas", hielo: "sin-hielo", esShot: true,
+    ingredientes: [
+      { tipo: "licor-menta", ml: 22 }, { tipo: "crema-irlandesa", ml: 22 },
+    ],
+    decoracion: "Verde y crema: refrescante y dulce",
+    pasos: "Crema de menta abajo y crema irlandesa flotando encima.",
+  },
+];
+
 const ML_POR_DASH = 0.9; // 1 dash ≈ 0,9 ml
 
 // ---------- Origen de cada destilado (formación del personal) ----------
@@ -488,6 +604,8 @@ const PERFIL_TIPO = {
   "licor-melocoton": { abv: .18, azucar: .30 }, "licor-coco": { abv: .20, azucar: .32 },
   "licor-sauco": { abv: .20, azucar: .30 }, "licor-cafe": { abv: .20, azucar: .33 },
   "amaretto": { abv: .25, azucar: .30 }, "licor-hierbas": { abv: .30, azucar: .25, amargo: true },
+  "crema-irlandesa": { abv: .17, azucar: .20, turbio: true, cremoso: true },
+  "licor-menta": { abv: .24, azucar: .32 },
   "vermut-rojo": { abv: .15, azucar: .15 }, "vermut-seco": { abv: .15, azucar: .03 },
   "campari": { abv: .25, azucar: .20, amargo: true }, "aperol": { abv: .11, azucar: .24, amargo: true },
   "cava-prosecco": { abv: .11, azucar: .01, gas: true },

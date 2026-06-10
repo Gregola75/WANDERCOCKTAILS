@@ -59,9 +59,20 @@ El generador propone cócteles nuevos **solo con los productos del inventario de
 - Cruza el recetario (clásicos + creaciones propias) con el inventario del negocio.
 - Lista los cócteles **listos para servir** y los que están a **un solo ingrediente** de distancia (sugerencia de compra).
 
-### ✨ Crear receta
+### ✨ Crear receta y personalizar clásicos
 - Editor de creaciones propias (ingredientes en ml, dashes o unidades, técnica, hielo, vaso) con **vista previa escalada** y coste en tiempo real.
-- Las creaciones se estandarizan igual que los clásicos.
+- Botón **«Personalizar con mis marcas»** en cualquier clásico o chupito: se carga en el editor, se le asigna la marca concreta del inventario a cada ingrediente (ej. *tu* ron) y se guarda como receta de la casa sin tocar el original. El coste usa el precio de la marca elegida (o la más económica si no se fija).
+- Las recetas propias se pueden **editar** después.
+
+### 🔥 Carta de chupitos
+- 10 shots famosos (B-52, Kamikaze, Lemon Drop, Baby Guinness, Cerebrito, Bandera Mexicana, Cucaracha…) escalados al caballito real del negocio.
+- En los chupitos **en capas (pousse-café)**, la app calcula el **orden de vertido por densidad** (más azúcar = más denso = abajo); el orden del B-52 calculado coincide con el real: café → crema irlandesa → triple sec.
+- Dos plantillas nuevas en «Inventar»: chupito en capas y chupito cítrico (mini sour), para crear la carta de shots de la casa con el inventario propio.
+
+### 💰 Ofertas rentables
+- Creador de promociones sobre el **coste real**: 2×1, happy hour (% descuento), precio cerrado y combos de 2 cócteles.
+- Cada oferta muestra ingreso, coste de producción, margen por venta y **semáforo de rentabilidad**: verde (coste ≤ 35 %), ámbar (≤ 50 %, para horas valle), rojo (pierdes margen).
+- Sugerencias automáticas según tu margen: descuento máximo que aguanta el 35 % de coste, coste real de un 2×1 y los cócteles más baratos de producir (ideales para 2×1).
 
 ### ⚙️ Ajustes y multi-establecimiento
 - % de llenado del vaso, margen de beneficio, moneda y dilución por técnica (agitado, removido, directo, batido).

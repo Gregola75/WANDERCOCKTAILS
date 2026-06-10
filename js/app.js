@@ -19,6 +19,7 @@ let estado = {
   moneda: "€",
   inventario: [],       // [{id, nombre, tipo, precio, cantidad, unidad: "ml"|"ud"}]
   recetasPropias: [],   // recetas creadas por el negocio (mismo formato que las clásicas)
+  ofertas: [],          // [{id, nombre, recetaId, recetaId2, tipo: "2x1"|"descuento"|"precio"|"combo", valor}]
 };
 
 function cargarEstado() {
@@ -51,7 +52,17 @@ function fmtDinero(n) {
   return n.toFixed(2).replace(".", ",") + " " + estado.moneda;
 }
 function todasRecetas() {
-  return RECETAS_CLASICAS.concat(estado.recetasPropias);
+  return RECETAS_CLASICAS.concat(RECETAS_SHOTS, estado.recetasPropias);
+}
+function recetaPorId(id) {
+  return todasRecetas().find(r => r.id === id);
+}
+
+// Densidad aproximada de un ingrediente (para el orden de capas):
+// el azúcar la sube, el alcohol la baja. Más denso = se vierte primero.
+function densidadTipo(tipoId) {
+  const p = PERFIL_TIPO[tipoId] || {};
+  return 1 + (p.azucar || 0) * 0.4 - (p.abv || 0) * 0.21;
 }
 
 // ---------- Motor de escalado ----------
@@ -149,7 +160,15 @@ function costeReceta(escalada) {
   let total = 0;
   const faltantes = [];
   escalada.ingredientes.forEach(i => {
-    const c = costes[i.tipo];
+    // Si la receta fija una marca concreta del inventario, se usa su precio;
+    // si no, el producto más económico de ese tipo.
+    let c = costes[i.tipo];
+    if (i.marca) {
+      const item = estado.inventario.find(x => x.id === i.marca);
+      if (item && item.precio && item.cantidad) {
+        c = { cu: item.precio / item.cantidad, unidad: item.unidad, nombre: item.nombre };
+      }
+    }
     if (!c) { faltantes.push(i.nombreTipo); return; }
     if (i.uds != null && c.unidad === "ud") total += i.uds * c.cu;
     else if (i.uds != null) faltantes.push(i.nombreTipo);
@@ -185,6 +204,7 @@ function cambiarSeccion(id) {
   if (id === "crear") renderCrear();
   if (id === "inventar") renderInventar();
   if (id === "descubrir") renderDescubrir();
+  if (id === "ofertas") renderOfertas();
   if (id === "ajustes") renderAjustes();
 }
 
@@ -491,7 +511,9 @@ function panelSabor(receta, escalada) {
   const construidoValido = !coincide && m.id === "agitado" && receta.tecnica === "directo" &&
     receta.hielo !== "sin-hielo" && !receta.ingredientes.some(i => NECESITAN_SHAKE.has(i.tipo));
   let metodoHtml;
-  if (coincide) {
+  if (receta.tecnica === "capas") {
+    metodoHtml = `<span class="tag tag-ok">✓ En capas: vierte despacio sobre el dorso de una cuchara, el más denso abajo</span>`;
+  } else if (coincide) {
     metodoHtml = `<span class="tag tag-ok">✓ Método correcto: ${esc(tecnicaPorId(receta.tecnica).nombre)} — ${esc(m.razon)}</span>`;
   } else if (construidoValido) {
     metodoHtml = `<span class="tag tag-ok">✓ Construido sobre hielo vale (estilo macerado / combinado); un agitado rápido lo integraría aún más</span>`;
@@ -517,9 +539,23 @@ function tarjetaReceta(receta, opciones = {}) {
   const h = hieloPorId(e.hieloUsado);
   const tec = tecnicaPorId(receta.tecnica);
 
-  const lineas = e.ingredientes.map(i =>
-    `<div class="ing-linea"><span>${esc(i.nombreTipo)}</span><span class="cant">${i.texto}</span></div>`
-  ).join("");
+  const lineas = e.ingredientes.map(i => {
+    let marca = "";
+    if (i.marca) {
+      const item = estado.inventario.find(x => x.id === i.marca);
+      if (item) marca = ` <span class="meta">· ${esc(item.nombre)}</span>`;
+    }
+    return `<div class="ing-linea"><span>${esc(i.nombreTipo)}${marca}</span><span class="cant">${i.texto}</span></div>`;
+  }).join("");
+
+  // Orden de vertido para chupitos en capas (más denso primero)
+  let capasHtml = "";
+  if (receta.tecnica === "capas") {
+    const orden = [...e.ingredientes]
+      .sort((a, b) => densidadTipo(b.tipo) - densidadTipo(a.tipo))
+      .map((i, n) => `${n + 1}º ${esc(i.nombreTipo)}`);
+    capasHtml = `<p class="meta">🌈 Orden de vertido (por densidad): ${orden.join(" → ")}</p>`;
+  }
 
   const precioSugerido = c.total * estado.margen;
   const costeHtml = c.completo
@@ -544,6 +580,7 @@ function tarjetaReceta(receta, opciones = {}) {
       </div>
       ${avisos}
       <div>${lineas}</div>
+      ${capasHtml}
       ${panelSabor(receta, e)}
       <p class="meta">
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
@@ -553,7 +590,10 @@ function tarjetaReceta(receta, opciones = {}) {
       ${receta.decoracion ? `<p class="meta">🍋 ${esc(receta.decoracion)}</p>` : ""}
       ${receta.pasos ? `<p class="pasos">${esc(receta.pasos)}</p>` : ""}
       <div>${dispTag}</div>
-      ${opciones.propia ? `<div><button class="btn btn-peligro btn-mini" data-borrar-receta="${receta.id}">Eliminar receta</button></div>` : ""}
+      <div class="fila">
+        ${opciones.editable !== false && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-personalizar="${receta.id}">🛠 ${opciones.propia ? "Editar" : "Personalizar con mis marcas"}</button>` : ""}
+        ${opciones.propia ? `<button class="btn btn-peligro btn-mini" data-borrar-receta="${receta.id}">Eliminar</button>` : ""}
+      </div>
     </div>`;
 }
 
@@ -569,6 +609,7 @@ function renderRecetas() {
 
   const propias = filtrar(estado.recetasPropias);
   const clasicas = filtrar(RECETAS_CLASICAS);
+  const shots = filtrar(RECETAS_SHOTS);
 
   $("#recetas-propias-bloque").style.display = estado.recetasPropias.length ? "" : "none";
   $("#lista-recetas-propias").innerHTML = propias.length
@@ -577,14 +618,70 @@ function renderRecetas() {
   $("#lista-recetas").innerHTML = clasicas.length
     ? clasicas.map(r => tarjetaReceta(r)).join("")
     : `<p class="vacio">Ninguna receta coincide con el filtro.</p>`;
+  $("#lista-shots").innerHTML = shots.length
+    ? shots.map(r => tarjetaReceta(r)).join("")
+    : `<p class="vacio">Ningún chupito coincide con el filtro.</p>`;
+}
 
-  $$("#sec-recetas [data-borrar-receta]").forEach(b => {
-    b.addEventListener("click", () => {
-      if (!confirm("¿Eliminar esta receta propia?")) return;
-      estado.recetasPropias = estado.recetasPropias.filter(r => r.id !== b.dataset.borrarReceta);
-      guardarEstado(); renderRecetas();
-    });
+// ---------- Personalizar / editar recetas en el formulario ----------
+let recetaEditandoId = null; // si se edita una receta propia, su id
+
+function opcionesMarcaHtml(tipoId, marcaSel) {
+  const items = estado.inventario.filter(i => i.tipo === tipoId);
+  return `<option value="">Marca: la más económica</option>` +
+    items.map(i => `<option value="${i.id}" ${i.id === marcaSel ? "selected" : ""}>${esc(i.nombre)}</option>`).join("");
+}
+
+function cargarEnEditor(recetaId) {
+  const r = recetaPorId(recetaId);
+  if (!r) return;
+  const esPropia = estado.recetasPropias.some(x => x.id === r.id);
+  cambiarSeccion("crear");
+  recetaEditandoId = esPropia ? r.id : null;
+
+  $("#nr-nombre").value = esPropia ? r.nombre : r.nombre + " de la casa";
+  // Garantiza que el vaso/hielo de la receta estén en los desplegables
+  // aunque el negocio no los tenga seleccionados en su barra.
+  const selVaso = $("#nr-vaso");
+  if (![...selVaso.options].some(o => o.value === r.vaso)) {
+    const v = vasoPorId(r.vaso);
+    selVaso.insertAdjacentHTML("beforeend", `<option value="${v.id}">${esc(v.nombre)} (${v.ml} ml)</option>`);
+  }
+  selVaso.value = r.vaso;
+  $("#nr-tecnica").value = r.tecnica;
+  const selHielo = $("#nr-hielo");
+  if (![...selHielo.options].some(o => o.value === r.hielo)) {
+    const h = hieloPorId(r.hielo);
+    selHielo.insertAdjacentHTML("beforeend", `<option value="${h.id}">${esc(h.nombre)}</option>`);
+  }
+  selHielo.value = r.hielo;
+
+  const cont = $("#nr-ingredientes");
+  cont.innerHTML = "";
+  r.ingredientes.forEach(ing => {
+    cont.insertAdjacentHTML("beforeend", filaIngredienteHtml());
+    const row = cont.lastElementChild;
+    row.querySelector(".ing-tipo").value = ing.tipo;
+    if (ing.ml != null) {
+      row.querySelector(".ing-cant").value = ing.ml;
+      row.querySelector(".ing-unidad").value = "ml";
+    } else if (ing.dash != null) {
+      row.querySelector(".ing-cant").value = ing.dash;
+      row.querySelector(".ing-unidad").value = "dash";
+    } else {
+      row.querySelector(".ing-cant").value = ing.ud || 1;
+      row.querySelector(".ing-unidad").value = "ud";
+    }
+    row.querySelector(".ing-marca").innerHTML = opcionesMarcaHtml(ing.tipo, ing.marca);
   });
+  activarBotonesQuitar();
+  $("#nr-decoracion").value = r.decoracion || "";
+  $("#nr-pasos").value = r.pasos || "";
+  $("#aviso-edicion").innerHTML = esPropia
+    ? `Editando «${esc(r.nombre)}»: al guardar se actualizará.`
+    : `Personalizando el clásico «${esc(r.nombre)}»: se guardará como receta de la casa con tus marcas (el original no se toca).`;
+  vistaPrevia();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 // ---------- Crear receta ----------
@@ -602,11 +699,16 @@ function filaIngredienteHtml() {
         <option value="dash">dash</option>
         <option value="ud">ud</option>
       </select>
+      <select class="ing-marca" style="width:200px">
+        <option value="">Marca: la más económica</option>
+      </select>
       <button type="button" class="btn btn-peligro btn-mini quitar-ing">✕</button>
     </div>`;
 }
 
 function renderCrear() {
+  recetaEditandoId = null;
+  $("#aviso-edicion").innerHTML = "";
   const selVaso = $("#nr-vaso");
   const seleccionados = Object.keys(estado.vasos);
   const fuente = seleccionados.length ? VASOS.filter(v => seleccionados.includes(v.id)) : VASOS;
@@ -624,7 +726,18 @@ function renderCrear() {
   if (!cont.children.length) {
     cont.innerHTML = filaIngredienteHtml() + filaIngredienteHtml();
   }
+  poblarMarcasFilas();
   activarBotonesQuitar();
+}
+
+// Rellena el selector de marca de cada fila con los productos del
+// inventario que coinciden con el tipo elegido.
+function poblarMarcasFilas() {
+  $$("#nr-ingredientes .ing-row").forEach(row => {
+    const sel = row.querySelector(".ing-marca");
+    const tipo = row.querySelector(".ing-tipo").value;
+    sel.innerHTML = opcionesMarcaHtml(tipo, sel.value);
+  });
 }
 
 function activarBotonesQuitar() {
@@ -640,10 +753,11 @@ function leerIngredientesFormulario() {
     const tipo = row.querySelector(".ing-tipo").value;
     const cant = parseFloat(row.querySelector(".ing-cant").value);
     const unidad = row.querySelector(".ing-unidad").value;
+    const marca = row.querySelector(".ing-marca").value;
     if (!tipo || !(cant > 0)) return null;
-    if (unidad === "ml") return { tipo, ml: cant };
-    if (unidad === "dash") return { tipo, dash: cant };
-    return { tipo, ud: cant };
+    const ing = unidad === "ml" ? { tipo, ml: cant } : unidad === "dash" ? { tipo, dash: cant } : { tipo, ud: cant };
+    if (marca) ing.marca = marca;
+    return ing;
   }).filter(Boolean);
 }
 
@@ -656,8 +770,8 @@ function guardarRecetaNueva(ev) {
     alert("La receta necesita al menos un ingrediente medido en ml para poder escalarse.");
     return;
   }
-  estado.recetasPropias.push({
-    id: "propia-" + Date.now(),
+  const receta = {
+    id: recetaEditandoId || "propia-" + Date.now(),
     nombre,
     vaso: $("#nr-vaso").value,
     tecnica: $("#nr-tecnica").value,
@@ -665,7 +779,14 @@ function guardarRecetaNueva(ev) {
     ingredientes,
     decoracion: $("#nr-decoracion").value.trim(),
     pasos: $("#nr-pasos").value.trim(),
-  });
+  };
+  if (recetaEditandoId) {
+    const idx = estado.recetasPropias.findIndex(r => r.id === recetaEditandoId);
+    if (idx >= 0) estado.recetasPropias[idx] = receta;
+    recetaEditandoId = null;
+  } else {
+    estado.recetasPropias.push(receta);
+  }
   guardarEstado();
   $("#form-receta").reset();
   $("#nr-ingredientes").innerHTML = "";
@@ -852,6 +973,126 @@ function renderDescubrir() {
     : `<p class="vacio">Nada pendiente de un solo ingrediente.</p>`;
 }
 
+// ---------- Ofertas ----------
+// Una oferta solo es buena si conoces tu coste: la app calcula el margen
+// real de cada promoción y avisa con un semáforo de rentabilidad.
+function calcularOferta(o) {
+  const r1 = recetaPorId(o.recetaId);
+  if (!r1) return null;
+  const c1 = costeReceta(escalarReceta(r1));
+  const pvp1 = c1.total * estado.margen;
+  let ingreso, coste, descripcion;
+  if (o.tipo === "2x1") {
+    ingreso = pvp1; coste = 2 * c1.total;
+    descripcion = `2 × ${r1.nombre} al precio de 1 (${fmtDinero(pvp1)})`;
+  } else if (o.tipo === "descuento") {
+    ingreso = pvp1 * (1 - o.valor / 100); coste = c1.total;
+    descripcion = `${r1.nombre} con −${o.valor}%: ${fmtDinero(ingreso)} (antes ${fmtDinero(pvp1)})`;
+  } else if (o.tipo === "precio") {
+    ingreso = o.valor; coste = c1.total;
+    descripcion = `${r1.nombre} a precio cerrado ${fmtDinero(o.valor)} (normal ${fmtDinero(pvp1)})`;
+  } else { // combo
+    const r2 = recetaPorId(o.recetaId2);
+    if (!r2) return null;
+    const c2 = costeReceta(escalarReceta(r2));
+    ingreso = o.valor; coste = c1.total + c2.total;
+    descripcion = `Combo ${r1.nombre} + ${r2.nombre} por ${fmtDinero(o.valor)}`;
+  }
+  const costePct = ingreso > 0 ? coste / ingreso * 100 : 999;
+  const salud = costePct <= 35
+    ? { clase: "tag-ok", texto: "✓ Rentable (coste ≤ 35 %)" }
+    : costePct <= 50
+      ? { clase: "tag-oro", texto: "Ajustada: coste " + costePct.toFixed(0) + " % — válida para atraer clientes en horas valle" }
+      : { clase: "tag-mal", texto: "⚠ Pierdes margen: el coste se come el " + costePct.toFixed(0) + " % del ingreso" };
+  return { descripcion, ingreso, coste, margen: ingreso - coste, costePct, salud };
+}
+
+function recetasConCosteCompleto() {
+  return todasRecetas()
+    .map(r => ({ r, c: costeReceta(escalarReceta(r)) }))
+    .filter(x => x.c.completo && x.c.total > 0);
+}
+
+function renderOfertas() {
+  const disponibles = recetasConCosteCompleto();
+  const opciones = disponibles.map(x =>
+    `<option value="${x.r.id}">${esc(x.r.nombre)} (coste ${fmtDinero(x.c.total)} · PVP ${fmtDinero(x.c.total * estado.margen)})</option>`).join("");
+  $("#of-receta").innerHTML = opciones;
+  $("#of-receta2").innerHTML = opciones;
+
+  // Sugerencias automáticas según el margen configurado
+  const margen = estado.margen;
+  const descMax = Math.max(0, (1 - 1 / (0.35 * margen)) * 100);
+  const coste2x1 = 200 / margen;
+  const baratos = [...disponibles].sort((a, b) => a.c.total - b.c.total).slice(0, 3);
+  $("#of-sugerencias").innerHTML = `
+    <div class="kpi"><b>−${descMax.toFixed(0)} %</b> descuento máximo manteniendo coste ≤ 35 % (con tu margen ×${margen})</div>
+    <div class="kpi"><b>${coste2x1.toFixed(0)} %</b> coste real de un 2×1 con tus precios — ${coste2x1 <= 50 ? "viable para horas valle" : "cuidado: muy justo"}</div>
+    ${baratos.length ? `<div class="kpi"><b>Mejores para 2×1</b> ${baratos.map(x => esc(x.r.nombre)).join(" · ")} (los de menor coste)</div>` : ""}`;
+
+  const cont = $("#lista-ofertas");
+  if (!estado.ofertas.length) {
+    cont.innerHTML = `<p class="vacio">Aún no hay ofertas creadas. Diseña la primera con el formulario.</p>`;
+  } else {
+    cont.innerHTML = estado.ofertas.map(o => {
+      const calc = calcularOferta(o);
+      if (!calc) return "";
+      return `
+        <div class="card receta-card">
+          <div class="cabecera">
+            <h4>💰 ${esc(o.nombre)}</h4>
+            <div class="coste">${fmtDinero(calc.ingreso)}</div>
+          </div>
+          <p class="meta">${esc(calc.descripcion)}</p>
+          <div class="ing-linea"><span>Coste de producción</span><span class="cant">${fmtDinero(calc.coste)}</span></div>
+          <div class="ing-linea"><span>Margen por venta</span><span class="cant">${fmtDinero(calc.margen)}</span></div>
+          <div class="ing-linea"><span>Coste sobre ingreso</span><span class="cant">${calc.costePct.toFixed(0)} %</span></div>
+          <div><span class="tag ${calc.salud.clase}">${calc.salud.texto}</span></div>
+          <div><button class="btn btn-peligro btn-mini" data-borrar-oferta="${o.id}">Eliminar oferta</button></div>
+        </div>`;
+    }).join("");
+  }
+  cont.querySelectorAll("[data-borrar-oferta]").forEach(b => b.addEventListener("click", () => {
+    estado.ofertas = estado.ofertas.filter(o => o.id !== b.dataset.borrarOferta);
+    guardarEstado(); renderOfertas();
+  }));
+  actualizarFormularioOferta();
+}
+
+function actualizarFormularioOferta() {
+  const tipo = $("#of-tipo").value;
+  $("#of-valor-campo").style.display = tipo === "2x1" ? "none" : "";
+  $("#of-receta2-campo").style.display = tipo === "combo" ? "" : "none";
+  $("#of-valor-label").textContent =
+    tipo === "descuento" ? "% de descuento" : "Precio de la oferta (" + estado.moneda + ")";
+}
+
+function guardarOferta(ev) {
+  ev.preventDefault();
+  const tipo = $("#of-tipo").value;
+  const recetaId = $("#of-receta").value;
+  if (!recetaId) return;
+  const valor = parseFloat($("#of-valor").value);
+  if (tipo !== "2x1" && !(valor > 0)) return;
+  const r1 = recetaPorId(recetaId);
+  const oferta = {
+    id: "oferta-" + Date.now(),
+    tipo, recetaId,
+    recetaId2: tipo === "combo" ? $("#of-receta2").value : null,
+    valor: tipo === "2x1" ? null : valor,
+    nombre: $("#of-nombre").value.trim() ||
+      (tipo === "2x1" ? "2×1 en " + r1.nombre
+        : tipo === "descuento" ? "Happy hour " + r1.nombre
+        : tipo === "combo" ? "Combo " + r1.nombre
+        : r1.nombre + " a precio especial"),
+  };
+  if (tipo === "combo" && !oferta.recetaId2) return;
+  estado.ofertas.push(oferta);
+  guardarEstado();
+  $("#form-oferta").reset();
+  renderOfertas();
+}
+
 // ---------- Ajustes ----------
 function renderAjustes() {
   $("#aj-nombre").value = estado.nombreNegocio;
@@ -934,8 +1175,29 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#form-receta").addEventListener("submit", guardarRecetaNueva);
   $("#btn-add-ing").addEventListener("click", () => {
     $("#nr-ingredientes").insertAdjacentHTML("beforeend", filaIngredienteHtml());
+    poblarMarcasFilas();
     activarBotonesQuitar();
   });
+  // Al cambiar el tipo de un ingrediente, ofrecer las marcas de ese tipo
+  $("#nr-ingredientes").addEventListener("change", ev => {
+    if (ev.target.classList.contains("ing-tipo")) {
+      const row = ev.target.closest(".ing-row");
+      row.querySelector(".ing-marca").innerHTML = opcionesMarcaHtml(ev.target.value, "");
+    }
+  });
+  // Personalizar clásicos / editar y borrar recetas propias (delegado)
+  document.addEventListener("click", ev => {
+    const p = ev.target.closest("[data-personalizar]");
+    if (p) { cargarEnEditor(p.dataset.personalizar); return; }
+    const b = ev.target.closest("[data-borrar-receta]");
+    if (b) {
+      if (!confirm("¿Eliminar esta receta propia?")) return;
+      estado.recetasPropias = estado.recetasPropias.filter(r => r.id !== b.dataset.borrarReceta);
+      guardarEstado(); renderRecetas();
+    }
+  });
+  $("#form-oferta").addEventListener("submit", guardarOferta);
+  $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   $("#btn-preview").addEventListener("click", vistaPrevia);
   // Vista previa en vivo: el indicador de sabor se actualiza mientras escribes
   let temporizadorPreview = null;
