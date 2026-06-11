@@ -11,7 +11,8 @@ const CLAVE_STORAGE = "wandercocktails-v1";
 // ---------- Estado del establecimiento ----------
 let estado = {
   nombreNegocio: "",
-  vasos: {},            // { vasoId: mlAjustado } -> solo los vasos que usa el negocio
+  misVasos: [],         // [{id, tipo, ml}] -> vasos reales del negocio;
+                        // puede repetirse el mismo tipo en varias capacidades
   hielos: {},           // { hieloId: despPct ajustado } -> hielos disponibles
   diluciones: {},       // { tecnicaId: pct } -> ajuste fino por técnica
   llenadoPct: 90,       // % del vaso que se llena (espacio libre para decorar/transportar)
@@ -31,6 +32,13 @@ function cargarEstado() {
   } catch (e) { /* estado por defecto */ }
   // valores por defecto para diluciones/hielos no guardados
   TECNICAS.forEach(t => { if (estado.diluciones[t.id] == null) estado.diluciones[t.id] = t.dilucionPct; });
+  // migración del modelo antiguo de vasos ({tipo: ml}) a la lista misVasos
+  if (estado.vasos && Object.keys(estado.vasos).length && !(estado.misVasos || []).length) {
+    estado.misVasos = Object.entries(estado.vasos).map(([tipo, ml], i) =>
+      ({ id: "mv-mig-" + i, tipo, ml }));
+  }
+  if (!estado.misVasos) estado.misVasos = [];
+  delete estado.vasos;
 }
 
 function guardarEstado() {
@@ -77,22 +85,24 @@ function escalarReceta(receta) {
   const refVaso = vasoPorId(receta.vaso);
   const avisos = [];
 
-  // Vaso real del negocio: el de la receta si lo tiene seleccionado,
-  // si no, el vaso seleccionado con capacidad más parecida.
+  // Vaso real del negocio: si tiene el tipo de la receta (quizá en varias
+  // medidas), se usa el de capacidad más parecida a la de referencia;
+  // si no lo tiene, el vaso propio más parecido de cualquier tipo.
+  const masCercano = lista => lista.reduce((mejor, v) =>
+    Math.abs(v.ml - refVaso.ml) < Math.abs(mejor.ml - refVaso.ml) ? v : mejor);
   let vasoUsado = receta.vaso;
-  let capacidad = estado.vasos[receta.vaso];
-  if (capacidad == null) {
-    const seleccionados = Object.keys(estado.vasos);
-    if (seleccionados.length) {
-      vasoUsado = seleccionados.reduce((mejor, id) =>
-        Math.abs(estado.vasos[id] - refVaso.ml) < Math.abs(estado.vasos[mejor] - refVaso.ml) ? id : mejor
-      );
-      capacidad = estado.vasos[vasoUsado];
-      avisos.push(`No tienes ${refVaso.nombre} en tu barra: se usa ${vasoPorId(vasoUsado).nombre} (${capacidad} ml), el más parecido.`);
-    } else {
-      capacidad = refVaso.ml;
-      avisos.push("Aún no has seleccionado vasos en «Mi barra»: se usan las medidas de referencia.");
-    }
+  let capacidad;
+  const delTipo = estado.misVasos.filter(v => v.tipo === receta.vaso);
+  if (delTipo.length) {
+    capacidad = masCercano(delTipo).ml;
+  } else if (estado.misVasos.length) {
+    const alternativo = masCercano(estado.misVasos);
+    vasoUsado = alternativo.tipo;
+    capacidad = alternativo.ml;
+    avisos.push(`No tienes ${refVaso.nombre} en tu barra: se usa ${vasoPorId(vasoUsado).nombre} (${capacidad} ml), el más parecido.`);
+  } else {
+    capacidad = refVaso.ml;
+    avisos.push("Aún no has añadido vasos en «Mi barra»: se usan las medidas de referencia.");
   }
 
   // Hielo real: el de la receta si está disponible; si no, el primero disponible (o sin hielo).
@@ -261,51 +271,92 @@ function opcionesTiposHtml(soloCat) {
 function renderBarra() {
   $("#bloque-vasos").style.display = subBarra === "vasos" ? "" : "none";
   $("#bloque-hielos").style.display = subBarra === "hielos" ? "" : "none";
-  const contV = $("#lista-vasos");
-  contV.innerHTML = VASOS.map(v => {
-    const sel = estado.vasos[v.id] != null;
-    const ml = sel ? estado.vasos[v.id] : v.ml;
-    return `
-      <div class="card ${sel ? "sel" : ""}">
-        <label class="check">
-          <input type="checkbox" data-vaso="${v.id}" ${sel ? "checked" : ""}>
-          <h4>${esc(v.nombre)}</h4>
-        </label>
-        <p class="desc">${esc(v.desc)}</p>
-        <div class="fila">
-          <label>Capacidad real:</label>
-          <input type="number" min="10" max="2000" step="5" value="${ml}" data-vaso-ml="${v.id}" ${sel ? "" : "disabled"}>
-          <span>ml</span>
-        </div>
-        <p class="rango">Rango habitual verificado: ${v.rango[0]}–${v.rango[1]} ml (referencia ${v.ml} ml)</p>
-        <p class="rango aviso-rango" data-aviso-vaso="${v.id}"></p>
-      </div>`;
-  }).join("");
+  // --- Mis vasos en uso (puede repetirse el tipo en varias medidas) ---
+  const contM = $("#mis-vasos");
+  contM.innerHTML = estado.misVasos.length
+    ? estado.misVasos.map(mv => {
+      const t = vasoPorId(mv.tipo);
+      return `
+        <div class="card vaso-card sel">
+          <div class="vaso-icono">${VASO_SVG[mv.tipo] || ""}</div>
+          <div class="vaso-info">
+            <h4>${esc(t.nombre)}</h4>
+            <div class="fila">
+              <input type="number" min="10" max="2000" step="5" value="${mv.ml}" data-mv-ml="${mv.id}">
+              <span>ml</span>
+              <button class="btn btn-peligro btn-mini" data-mv-quitar="${mv.id}">Quitar</button>
+            </div>
+            <p class="rango aviso-rango" data-aviso-mv="${mv.id}"></p>
+          </div>
+        </div>`;
+    }).join("")
+    : `<p class="vacio">Aún no has añadido vasos. Elige abajo en el catálogo, ajusta los ml reales y pulsa «Añadir». Puedes tener el mismo vaso en varias medidas (ej. highball de 320 y de 400 ml).</p>`;
 
-  contV.querySelectorAll("input[data-vaso]").forEach(chk => {
-    chk.addEventListener("change", () => {
-      const id = chk.dataset.vaso;
-      if (chk.checked) estado.vasos[id] = vasoPorId(id).ml;
-      else delete estado.vasos[id];
-      guardarEstado(); renderBarra();
-    });
-  });
-  contV.querySelectorAll("input[data-vaso-ml]").forEach(inp => {
+  contM.querySelectorAll("input[data-mv-ml]").forEach(inp => {
     inp.addEventListener("change", () => {
-      const id = inp.dataset.vasoMl;
-      const v = vasoPorId(id);
+      const mv = estado.misVasos.find(x => x.id === inp.dataset.mvMl);
       const ml = parseFloat(inp.value);
-      if (!ml || ml <= 0) { inp.value = estado.vasos[id]; return; }
-      estado.vasos[id] = ml;
-      const aviso = contV.querySelector(`[data-aviso-vaso="${id}"]`);
+      if (!mv || !ml || ml <= 0) { if (mv) inp.value = mv.ml; return; }
+      mv.ml = ml;
+      const v = vasoPorId(mv.tipo);
+      const aviso = contM.querySelector(`[data-aviso-mv="${mv.id}"]`);
       if (ml < v.rango[0] || ml > v.rango[1]) {
         inp.classList.add("fuera-rango");
-        aviso.innerHTML = `<span class="mal">⚠ ${ml} ml está fuera del rango habitual de este vaso. Verifica la medida (llénalo de agua y mídelo).</span>`;
+        aviso.innerHTML = `<span class="mal">⚠ Fuera del rango habitual (${v.rango[0]}–${v.rango[1]} ml). Verifica: llénalo de agua y mídelo.</span>`;
       } else {
         inp.classList.remove("fuera-rango");
         aviso.textContent = "";
       }
       guardarEstado();
+    });
+  });
+  contM.querySelectorAll("[data-mv-quitar]").forEach(b => {
+    b.addEventListener("click", () => {
+      estado.misVasos = estado.misVasos.filter(x => x.id !== b.dataset.mvQuitar);
+      guardarEstado(); renderBarra();
+    });
+  });
+
+  // --- Catálogo: elegir, ajustar ml y añadir ---
+  const contV = $("#lista-vasos");
+  contV.innerHTML = VASOS.map(v => {
+    const enUso = estado.misVasos.filter(x => x.tipo === v.id).length;
+    return `
+      <div class="card vaso-card">
+        <div class="vaso-icono">${VASO_SVG[v.id] || ""}</div>
+        <div class="vaso-info">
+          <h4>${esc(v.nombre)} ${enUso ? `<span class="tag tag-oro">en uso ×${enUso}</span>` : ""}</h4>
+          <p class="desc">${esc(v.desc)}</p>
+          <div class="fila">
+            <input type="number" min="10" max="2000" step="5" value="${v.ml}" data-cat-ml="${v.id}">
+            <span>ml</span>
+            <button class="btn btn-sec btn-mini" data-agregar-vaso="${v.id}">+ Añadir a mi barra</button>
+          </div>
+          <p class="rango">Rango habitual verificado: ${v.rango[0]}–${v.rango[1]} ml (referencia ${v.ml} ml)</p>
+          <p class="rango aviso-rango" data-aviso-cat="${v.id}"></p>
+        </div>
+      </div>`;
+  }).join("");
+
+  contV.querySelectorAll("[data-agregar-vaso]").forEach(b => {
+    b.addEventListener("click", () => {
+      const tipo = b.dataset.agregarVaso;
+      const v = vasoPorId(tipo);
+      const inp = contV.querySelector(`[data-cat-ml="${tipo}"]`);
+      const ml = parseFloat(inp.value);
+      const aviso = contV.querySelector(`[data-aviso-cat="${tipo}"]`);
+      if (!ml || ml <= 0) { aviso.innerHTML = `<span class="mal">Introduce la capacidad en ml.</span>`; return; }
+      if (estado.misVasos.some(x => x.tipo === tipo && x.ml === ml)) {
+        aviso.innerHTML = `<span class="mal">Ya tienes este vaso con ${ml} ml.</span>`;
+        return;
+      }
+      estado.misVasos.push({ id: "mv-" + Date.now(), tipo, ml });
+      guardarEstado();
+      renderBarra();
+      if (ml < v.rango[0] || ml > v.rango[1]) {
+        const avisoM = $("#mis-vasos").querySelector(`[data-aviso-mv="${estado.misVasos[estado.misVasos.length - 1].id}"]`);
+        if (avisoM) avisoM.innerHTML = `<span class="mal">⚠ ${ml} ml está fuera del rango habitual (${v.rango[0]}–${v.rango[1]}). Verifica la medida con agua.</span>`;
+      }
     });
   });
 
@@ -346,7 +397,7 @@ function renderBarra() {
     });
   });
 
-  const nVasos = Object.keys(estado.vasos).length;
+  const nVasos = estado.misVasos.length;
   const nHielos = Object.keys(estado.hielos).length;
   $("#resumen-barra").innerHTML = `
     <div class="kpi"><b>${nVasos}</b> vasos seleccionados</div>
@@ -641,10 +692,13 @@ function tarjetaReceta(receta, opciones = {}) {
         <h4>${esc(receta.nombre)}</h4>
         ${costeHtml}
       </div>
-      <div>
+      <div class="fila-vaso">
+        <span class="mini-vaso" title="${esc(vReal.nombre)}">${VASO_SVG[e.vasoUsado] || ""}</span>
+        <div>
         <span class="tag tag-oro">${esc(vReal.nombre)} · ${e.capacidad} ml</span>
         <span class="tag">${esc(h.nombre)}${e.despPct ? ` · ${Math.round(e.hieloMl)} ml desplazados` : ""}</span>
         <span class="tag">${esc(tec.nombre)} · ${e.dilucionPct}% dilución</span>
+        </div>
       </div>
       ${avisos}
       <div>${lineas}</div>
@@ -711,6 +765,7 @@ function abrirFicha(recetaId) {
   overlay.innerHTML = `
     <div class="ficha">
       <button class="ficha-cerrar" title="Cerrar">✕</button>
+      <div class="ficha-icono" title="${esc(vaso.nombre)}">${VASO_SVG[e.vasoUsado] || ""}</div>
       <h2>${esc(receta.nombre)}</h2>
       <p class="meta">${esc(vaso.nombre)} · ${e.capacidad} ml · ${esc(tecnica.nombre)}</p>
       <ol class="ficha-pasos">
@@ -886,11 +941,15 @@ function renderCrear() {
   recetaEditandoId = null;
   $("#aviso-edicion").innerHTML = "";
   const selVaso = $("#nr-vaso");
-  const seleccionados = Object.keys(estado.vasos);
-  const fuente = seleccionados.length ? VASOS.filter(v => seleccionados.includes(v.id)) : VASOS;
-  selVaso.innerHTML = fuente.map(v =>
-    `<option value="${v.id}">${esc(v.nombre)} (${estado.vasos[v.id] ?? v.ml} ml)</option>`
-  ).join("");
+  const tiposPropios = [...new Set(estado.misVasos.map(v => v.tipo))];
+  const fuente = tiposPropios.length ? VASOS.filter(v => tiposPropios.includes(v.id)) : VASOS;
+  selVaso.innerHTML = fuente.map(v => {
+    const propios = estado.misVasos.filter(x => x.tipo === v.id);
+    const ml = propios.length
+      ? propios.reduce((m, x) => Math.abs(x.ml - v.ml) < Math.abs(m.ml - v.ml) ? x : m).ml
+      : v.ml;
+    return `<option value="${v.id}">${esc(v.nombre)} (${ml} ml)</option>`;
+  }).join("");
 
   $("#nr-tecnica").innerHTML = TECNICAS.map(t => `<option value="${t.id}">${esc(t.nombre)}</option>`).join("");
 

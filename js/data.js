@@ -28,6 +28,29 @@ const VASOS = [
   { id: "shot",        nombre: "Vaso Shot / Caballito",     ml: 50,  rango: [30, 70],   desc: "Vaso pequeño para chupitos y shooters." },
 ];
 
+// ---------- Siluetas de los vasos (línea dorada, sin imágenes externas) ----------
+const _svg = inner => `<svg viewBox="0 0 64 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const VASO_SVG = {
+  "martini":     _svg('<path d="M6 12h52L32 44Z"/><path d="M32 44v32"/><path d="M16 84h32"/>'),
+  "coupe":       _svg('<path d="M8 14c2 16 14 22 24 22s22-6 24-22Z"/><path d="M32 36v40"/><path d="M16 84h32"/>'),
+  "margarita":   _svg('<path d="M6 12h52c0 9-12 13-18 14-1 4-4 7-8 7s-7-3-8-7c-6-1-18-5-18-14Z"/><path d="M32 33v43"/><path d="M16 84h32"/>'),
+  "rocks":       _svg('<path d="M14 38h36l-3 46H17Z"/><path d="M18 54h28" opacity=".35"/>'),
+  "rocks-doble": _svg('<path d="M12 30h40l-3 54H15Z"/><path d="M16 48h32" opacity=".35"/>'),
+  "highball":    _svg('<path d="M18 12h28l-2 72H20Z"/><path d="M21 32h22" opacity=".35"/>'),
+  "collins":     _svg('<path d="M21 8h22l-1 78H22Z"/><path d="M23 28h18" opacity=".35"/>'),
+  "zombie":      _svg('<path d="M20 8h24v78H20Z"/><path d="M24 26h16" opacity=".35"/>'),
+  "hurricane":   _svg('<path d="M24 8h16c3 12-3 18-3 26 0 10 7 14 6 24-1 9-5 12-11 12s-10-3-11-12c-1-10 6-14 6-24 0-8-6-14-3-26Z"/><path d="M32 70v6"/><path d="M22 84h20"/>'),
+  "balon":       _svg('<path d="M32 10c-14 0-22 9-22 21 0 13 10 21 22 21s22-8 22-21c0-12-8-21-22-21Z"/><path d="M32 52v26"/><path d="M18 84h28"/>'),
+  "tiki":        _svg('<path d="M19 10h26v74H19Z"/><path d="M24 30h16M24 42h16"/><path d="M26 58h4m6 0h4"/>'),
+  "mule":        _svg('<path d="M14 24h30v56H14Z"/><path d="M44 34c11 0 11 22 0 22"/><path d="M18 36h22" opacity=".35"/>'),
+  "julep":       _svg('<path d="M18 20h28l-4 62H22Z"/><path d="M19 32h26"/>'),
+  "sour":        _svg('<path d="M19 12c0 16 5 22 13 22s13-6 13-22Z"/><path d="M32 34v42"/><path d="M16 84h32"/>'),
+  "nick-nora":   _svg('<path d="M15 12c0 15 7 22 17 22s17-7 17-22Z"/><path d="M32 34v42"/><path d="M16 84h32"/>'),
+  "flauta":      _svg('<path d="M25 8c0 26 1 36 7 36s7-10 7-36Z"/><path d="M32 44v32"/><path d="M18 84h28"/>'),
+  "vino":        _svg('<path d="M17 10c0 18 5 26 15 26s15-8 15-26Z"/><path d="M32 36v40"/><path d="M16 84h32"/>'),
+  "shot":        _svg('<path d="M22 50h20l-2 34H24Z"/><path d="M25 62h14" opacity=".35"/>'),
+};
+
 // ---------- Tipos de hielo ----------
 // despPct = % del volumen del vaso que ocupa (desplaza) el hielo.
 // Es el valor que más varía entre negocios: cada uno lo ajusta al hielo que compra/produce.

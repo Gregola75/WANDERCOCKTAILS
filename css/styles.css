@@ -601,6 +601,31 @@ tr:last-child td { border-bottom: none; }
 .reglas li { font-size: .84rem; color: var(--text-2); margin-bottom: 9px; line-height: 1.5; }
 .reglas li b { color: var(--text); }
 
+/* ---------- Iconos de vasos ---------- */
+.vaso-card { display: flex; gap: 16px; align-items: flex-start; }
+.vaso-icono {
+  color: var(--gold-2);
+  flex-shrink: 0;
+  width: 48px;
+  filter: drop-shadow(0 4px 10px rgba(217, 164, 65, .25));
+}
+.vaso-icono svg { width: 48px; height: 72px; }
+.vaso-info { flex: 1; min-width: 0; }
+.vaso-info h4 .tag { vertical-align: 2px; margin-left: 6px; }
+
+.fila-vaso { display: flex; gap: 10px; align-items: flex-start; }
+.mini-vaso { color: var(--gold-2); flex-shrink: 0; opacity: .9; }
+.mini-vaso svg { width: 22px; height: 33px; }
+
+.ficha-icono {
+  position: absolute;
+  top: 18px;
+  right: 64px;
+  color: var(--gold-2);
+  filter: drop-shadow(0 4px 12px rgba(217, 164, 65, .3));
+}
+.ficha-icono svg { width: 44px; height: 66px; }
+
 /* ---------- Modo barra: solo la guía de recetas ---------- */
 .modo-barra .menu-grupo:not([data-grupo="recetas"]) { display: none; }
 

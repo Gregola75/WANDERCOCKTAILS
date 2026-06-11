@@ -11,8 +11,8 @@ WanderCocktails parte de un **recetario de referencia con proporciones verificad
 ## Funcionalidades
 
 ### 🥃 Mi barra
-- Catálogo de 18 vasos y copas de coctelería con sus **capacidades habituales verificadas** (rango de mercado + valor de referencia).
-- Cada negocio marca los vasos que usa y ajusta la **capacidad real en ml** (ej.: copa margarita de 430 ml). Si la medida queda fuera del rango habitual, la app avisa para que se verifique.
+- Catálogo de 18 vasos y copas con sus **capacidades habituales verificadas** (rango de mercado + valor de referencia) y **silueta ilustrada** de cada vaso (SVG integrado, funciona offline) para que el bartender lo identifique de un vistazo.
+- Cada negocio construye su lista «Mis vasos en uso»: elige del catálogo, ajusta los **ml reales** y añade — puede repetir **el mismo tipo de vaso en varias medidas** (ej. highball de 320 y de 400 ml); las recetas eligen automáticamente el más adecuado. Si la medida queda fuera del rango habitual, la app avisa para que se verifique.
 - Tipos de hielo (cubos, picado, frappé, esfera, bloque, columna…) con su **% de desplazamiento ajustable**, porque es el factor que más varía entre negocios. Incluye instrucciones para medirlo con agua.
 
 ### 📖 Recetas estandarizadas
