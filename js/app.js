@@ -836,8 +836,11 @@ function toggleModo() {
 // El bartender entra directo a su guía; el máster entra con PIN.
 let pinDestino = "master"; // "master" (entrar/desbloquear) | "bloquear" (crear PIN y pasar a barra)
 
+let pinTemporal = null; // primer paso al crear el PIN (se confirma repitiéndolo)
+
 function mostrarEntrada(vista = "opciones", destino = "master") {
   pinDestino = destino;
+  pinTemporal = null;
   $("#pantalla-entrada").classList.add("visible");
   $("#entrada-negocio").textContent = estado.nombreNegocio || "";
   const esPin = vista === "pin";
@@ -845,10 +848,11 @@ function mostrarEntrada(vista = "opciones", destino = "master") {
   $("#entrada-pin").style.display = esPin ? "" : "none";
   if (esPin) {
     const crear = !estado.pinMaster;
-    $("#entrada-pin-titulo").textContent = crear ? "Crea tu PIN de máster" : "PIN de máster";
+    $("#entrada-pin-titulo").textContent = crear ? "Inventa tu PIN de máster" : "PIN de máster";
     $("#entrada-pin-ayuda").textContent = crear
-      ? "Mínimo 4 caracteres. Se pedirá siempre que alguien quiera entrar como máster."
-      : destino === "bloquear" ? "" : "Introduce tu PIN para entrar con control total.";
+      ? "Es la primera vez: escribe un código NUEVO de 4 a 6 números (ej. 2580) y pulsa Entrar. Apúntalo: será tu llave de máster."
+      : "Introduce tu PIN para entrar con control total.";
+    $("#btn-olvido-pin").style.display = crear ? "none" : "";
     $("#entrada-pin-error").textContent = "";
     $("#input-pin").value = "";
     setTimeout(() => $("#input-pin").focus(), 150);
@@ -863,7 +867,25 @@ function confirmarPin() {
   const pin = $("#input-pin").value.trim();
   const error = $("#entrada-pin-error");
   if (!estado.pinMaster) {
-    if (pin.length < 4) { error.textContent = "El PIN necesita al menos 4 caracteres."; return; }
+    // Creación en dos pasos: inventar el PIN y repetirlo para confirmar
+    if (pinTemporal === null) {
+      if (pin.length < 4) { error.textContent = "Muy corto: usa al menos 4 números (ej. 2580)."; return; }
+      pinTemporal = pin;
+      $("#input-pin").value = "";
+      $("#entrada-pin-titulo").textContent = "Repite el PIN";
+      $("#entrada-pin-ayuda").textContent = "Escríbelo otra vez para confirmar que no hay errores.";
+      error.textContent = "";
+      $("#input-pin").focus();
+      return;
+    }
+    if (pin !== pinTemporal) {
+      pinTemporal = null;
+      $("#input-pin").value = "";
+      $("#entrada-pin-titulo").textContent = "Inventa tu PIN de máster";
+      $("#entrada-pin-ayuda").textContent = "Escribe un código nuevo de 4 a 6 números y pulsa Entrar.";
+      error.textContent = "No coinciden: empieza de nuevo.";
+      return;
+    }
     estado.pinMaster = pin;
     estado.modo = pinDestino === "bloquear" ? "barra" : "master";
   } else {
@@ -1676,6 +1698,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-confirmar-pin").addEventListener("click", confirmarPin);
   $("#input-pin").addEventListener("keydown", ev => { if (ev.key === "Enter") confirmarPin(); });
   $("#btn-volver-entrada").addEventListener("click", () => mostrarEntrada("opciones"));
+  $("#btn-olvido-pin").addEventListener("click", () => {
+    if (!confirm("Sin el PIN no se puede entrar como máster.\n\nLa única salida es RESTABLECER la app en este dispositivo: se borran vasos, inventario, recetas propias y fotos (los clásicos no se pierden).\n\nSi tienes una copia exportada en Ajustes podrás importarla después. ¿Restablecer?")) return;
+    if (!confirm("¿Seguro? Esta acción no se puede deshacer.")) return;
+    localStorage.removeItem(CLAVE_STORAGE);
+    location.reload();
+  });
   $("#form-oferta").addEventListener("submit", guardarOferta);
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   aplicarModo();

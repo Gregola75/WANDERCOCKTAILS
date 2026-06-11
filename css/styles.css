@@ -806,3 +806,15 @@ tr:last-child td { border-bottom: none; }
   margin-bottom: 10px;
 }
 .entrada-error { color: var(--red); font-size: .8rem; min-height: 1.2em; margin-bottom: 10px; }
+
+.enlace-olvido {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: .75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.enlace-olvido:hover { color: var(--red); }
