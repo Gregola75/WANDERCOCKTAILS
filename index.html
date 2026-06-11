@@ -19,38 +19,74 @@
 
 <header>
   <div class="cabecera-app">
-    <h1>🍸 WANDER<span>COCKTAILS</span><span id="nombre-negocio" style="font-size:.9rem"></span> <span id="badge-modo" class="badge-modo"></span></h1>
-    <div class="fila">
-      <button class="btn btn-mini" id="btn-instalar" style="display:none">📲 Instalar app</button>
-      <button class="btn btn-sec btn-mini" id="btn-modo">🔓 Modo máster</button>
+    <button id="btn-menu" class="btn-menu" aria-label="Abrir menú">☰</button>
+    <h1>🍸 WANDER<span>COCKTAILS</span> <span id="badge-modo" class="badge-modo"></span></h1>
+    <div class="fila cabecera-acciones">
+      <button class="btn btn-mini" id="btn-instalar" style="display:none">📲 Instalar</button>
+      <button class="btn btn-sec btn-mini" id="btn-modo">🔓</button>
     </div>
   </div>
-  <p>El mismo cóctel, en cualquier establecimiento: configura tu cristalería y tu hielo, y las recetas se ajustan solas. Controla costes y descubre qué puedes crear con tu inventario.</p>
-  <nav>
-    <button data-sec="barra" class="activo">🥃 Mi barra</button>
-    <button data-sec="inventario">🧾 Inventario</button>
-    <button data-sec="recetas">📖 Recetas</button>
-    <button data-sec="crear">✨ Crear receta</button>
-    <button data-sec="inventar">🧪 Inventar</button>
-    <button data-sec="descubrir">🔍 ¿Qué puedo crear?</button>
-    <button data-sec="ofertas">💰 Ofertas</button>
-    <button data-sec="ajustes">⚙️ Ajustes</button>
-  </nav>
 </header>
+
+<div id="menu-overlay"></div>
+<aside id="menu-lateral">
+  <div class="menu-cabecera">
+    <span>🍸 <b>Menú</b><span id="nombre-negocio" class="menu-negocio"></span></span>
+    <button id="btn-cerrar-menu" aria-label="Cerrar menú">✕</button>
+  </div>
+
+  <div class="menu-grupo abierto" data-grupo="barra">
+    <button class="menu-titulo">🥃 Mi barra <span class="flecha">▾</span></button>
+    <div class="menu-items">
+      <button data-sec="barra" data-sub="vasos">Vasos y copas</button>
+      <button data-sec="barra" data-sub="hielos">Tipos de hielo</button>
+      <button data-sec="inventario">Inventario · destilados y productos</button>
+    </div>
+  </div>
+
+  <div class="menu-grupo" data-grupo="recetas">
+    <button class="menu-titulo">📖 Recetas <span class="flecha">▾</span></button>
+    <div class="menu-items">
+      <button data-sec="recetas" data-sub="clasicas">Recetas clásicas</button>
+      <button data-sec="recetas" data-sub="propias">Mis recetas</button>
+      <button data-sec="recetas" data-sub="shots">Chupitos</button>
+    </div>
+  </div>
+
+  <div class="menu-grupo" data-grupo="crear">
+    <button class="menu-titulo">✨ Crear <span class="flecha">▾</span></button>
+    <div class="menu-items">
+      <button data-sec="crear">Nueva receta</button>
+      <button data-sec="inventar">Inventar · reglas de oro</button>
+      <button data-sec="descubrir">¿Qué puedo crear?</button>
+    </div>
+  </div>
+
+  <div class="menu-grupo" data-grupo="ofertas">
+    <button class="menu-titulo directo" data-sec="ofertas">💰 Promociones</button>
+  </div>
+
+  <div class="menu-grupo" data-grupo="ajustes">
+    <button class="menu-titulo directo" data-sec="ajustes">⚙️ Ajustes</button>
+  </div>
+</aside>
 
 <main>
 
   <!-- ========== MI BARRA ========== -->
   <section id="sec-barra" class="seccion activa">
-    <h2>Mi barra: cristalería y hielo</h2>
-    <p class="sub">Marca los vasos que usa tu negocio y ajusta su capacidad real en ml (por ejemplo, tu copa margarita de 430 ml). Haz lo mismo con el hielo: su desplazamiento varía mucho entre negocios y es la clave para que el cóctel salga siempre igual.</p>
-    <div class="kpis" id="resumen-barra"></div>
+    <div id="bloque-vasos">
+      <h2>Vasos y copas</h2>
+      <p class="sub">Marca los vasos que usa tu negocio y ajusta su capacidad real en ml (por ejemplo, tu copa margarita de 430 ml). Las recetas se recalculan solas a tu cristalería.</p>
+      <div class="kpis" id="resumen-barra"></div>
+      <div class="grid" id="lista-vasos"></div>
+    </div>
 
-    <h3>Vasos y copas de coctelería</h3>
-    <div class="grid" id="lista-vasos"></div>
-
-    <h3>Tipos de hielo disponibles</h3>
-    <div class="grid" id="lista-hielos"></div>
+    <div id="bloque-hielos">
+      <h2>Tipos de hielo</h2>
+      <p class="sub">El desplazamiento del hielo varía mucho entre negocios y es la clave para que el cóctel salga siempre igual. Ajusta el tuyo: llena un vaso con tu hielo, añade agua hasta arriba y mide cuánta entra.</p>
+      <div class="grid" id="lista-hielos"></div>
+    </div>
   </section>
 
   <!-- ========== INVENTARIO ========== -->
@@ -135,23 +171,27 @@
 
   <!-- ========== RECETAS ========== -->
   <section id="sec-recetas" class="seccion">
-    <h2>Recetario estandarizado</h2>
-    <p class="sub">Cada receta se muestra ya escalada a TU cristalería, TU hielo y TU dilución, con su coste de producción y precio sugerido. Cambia el vaso o el hielo en «Mi barra» y todas las medidas se recalculan.</p>
+    <div id="bloque-clasicas">
+      <h2>Recetas clásicas</h2>
+      <p class="sub">Cada receta se muestra ya escalada a TU cristalería, TU hielo y TU dilución, con su coste y precio sugerido. Cambia el vaso o el hielo en «Mi barra» y todas las medidas se recalculan.</p>
+    </div>
+    <div id="bloque-propias">
+      <h2>Mis recetas</h2>
+      <p class="sub">Tus creaciones y tus versiones de los clásicos con las marcas de la casa. Se crean desde «Crear» o con el botón «Personalizar» de cualquier receta.</p>
+    </div>
+    <div id="bloque-shots">
+      <h2>Carta de chupitos</h2>
+      <p class="sub">Los shots más famosos del mundo, escalados a tu caballito real. En los de capas, la app calcula el orden de vertido por densidad (el más denso abajo).</p>
+    </div>
+
     <div class="fila" style="margin-bottom:16px">
-      <input type="text" id="filtro-recetas" placeholder="Buscar cóctel…" style="width:240px">
+      <input type="text" id="filtro-recetas" placeholder="Buscar…" style="width:220px">
       <label class="check"><input type="checkbox" id="filtro-posibles"> Solo los posibles con mi inventario</label>
     </div>
 
-    <div id="recetas-propias-bloque">
-      <h3>⭐ Mis creaciones</h3>
-      <div class="grid" id="lista-recetas-propias"></div>
-      <h3>Clásicos</h3>
-    </div>
-    <div class="grid" id="lista-recetas"></div>
-
-    <h3>🔥 Carta de chupitos — los mejores shots del mundo</h3>
-    <p class="sub">Escalados a tu caballito real. En los de capas, la app calcula el orden de vertido por densidad (el más dulce abajo). Personalízalos con tus marcas igual que los cócteles.</p>
-    <div class="grid" id="lista-shots"></div>
+    <div class="grid" id="lista-recetas-propias" style="display:none"></div>
+    <div class="grid" id="lista-recetas" style="display:none"></div>
+    <div class="grid" id="lista-shots" style="display:none"></div>
   </section>
 
   <!-- ========== CREAR RECETA ========== -->

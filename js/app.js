@@ -198,9 +198,25 @@ function analizarDisponibilidad(receta) {
 //  RENDERIZADO
 // =========================================================
 
-function cambiarSeccion(id) {
+// Subsecciones activas (acordeón del menú lateral)
+let subBarra = "vasos";      // "vasos" | "hielos"
+let subRecetas = "clasicas"; // "clasicas" | "propias" | "shots"
+
+function cambiarSeccion(id, sub) {
   if (esModoBarra()) id = "recetas"; // en modo barra solo existe la guía de recetas
-  $$("nav button").forEach(b => b.classList.toggle("activo", b.dataset.sec === id));
+  if (id === "barra" && sub) subBarra = sub;
+  if (id === "recetas" && sub) subRecetas = sub;
+
+  // Estado activo y grupo abierto en el menú lateral
+  $$("#menu-lateral [data-sec]").forEach(b => {
+    const subEsperado = id === "barra" ? subBarra : id === "recetas" ? subRecetas : null;
+    const activo = b.dataset.sec === id && (!b.dataset.sub || b.dataset.sub === subEsperado);
+    b.classList.toggle("activo", activo);
+  });
+  $$("#menu-lateral .menu-grupo").forEach(g => {
+    if (g.querySelector(`[data-sec="${id}"]`)) g.classList.add("abierto");
+  });
+
   $$(".seccion").forEach(s => s.classList.toggle("activa", s.id === "sec-" + id));
   if (id === "barra") renderBarra();
   if (id === "inventario") renderInventario();
@@ -210,6 +226,17 @@ function cambiarSeccion(id) {
   if (id === "descubrir") renderDescubrir();
   if (id === "ofertas") renderOfertas();
   if (id === "ajustes") renderAjustes();
+  cerrarMenu();
+  window.scrollTo({ top: 0 });
+}
+
+function abrirMenu() {
+  $("#menu-lateral").classList.add("abierto");
+  $("#menu-overlay").classList.add("visible");
+}
+function cerrarMenu() {
+  $("#menu-lateral").classList.remove("abierto");
+  $("#menu-overlay").classList.remove("visible");
 }
 
 // Opciones <select> de tipos agrupadas por categoría · subcategoría
@@ -232,6 +259,8 @@ function opcionesTiposHtml(soloCat) {
 
 // ---------- Mi barra (vasos + hielos) ----------
 function renderBarra() {
+  $("#bloque-vasos").style.display = subBarra === "vasos" ? "" : "none";
+  $("#bloque-hielos").style.display = subBarra === "hielos" ? "" : "none";
   const contV = $("#lista-vasos");
   contV.innerHTML = VASOS.map(v => {
     const sel = estado.vasos[v.id] != null;
@@ -706,7 +735,8 @@ function abrirFicha(recetaId) {
 function aplicarModo() {
   const barra = esModoBarra();
   document.body.classList.toggle("modo-barra", barra);
-  $("#btn-modo").textContent = barra ? "🔒 Modo barra — soy el máster" : "🔓 Modo máster — bloquear para el equipo";
+  $("#btn-modo").textContent = barra ? "🔓 Soy el máster" : "🔒 Bloquear";
+  $("#btn-modo").title = barra ? "Desbloquear modo máster (PIN)" : "Bloquear en modo barra para el equipo";
   $("#badge-modo").textContent = barra ? "MODO BARRA · solo guía" : "";
   if (barra) {
     cambiarSeccion("recetas");
@@ -743,20 +773,30 @@ function renderRecetas() {
     return true;
   });
 
-  const propias = filtrar(estado.recetasPropias);
-  const clasicas = filtrar(RECETAS_CLASICAS);
-  const shots = filtrar(RECETAS_SHOTS);
+  // Mostrar solo la sublista elegida en el menú (clásicas / propias / chupitos)
+  $("#bloque-clasicas").style.display = subRecetas === "clasicas" ? "" : "none";
+  $("#bloque-propias").style.display = subRecetas === "propias" ? "" : "none";
+  $("#bloque-shots").style.display = subRecetas === "shots" ? "" : "none";
+  $("#lista-recetas").style.display = subRecetas === "clasicas" ? "" : "none";
+  $("#lista-recetas-propias").style.display = subRecetas === "propias" ? "" : "none";
+  $("#lista-shots").style.display = subRecetas === "shots" ? "" : "none";
 
-  $("#recetas-propias-bloque").style.display = estado.recetasPropias.length ? "" : "none";
-  $("#lista-recetas-propias").innerHTML = propias.length
-    ? propias.map(r => tarjetaReceta(r, { propia: true })).join("")
-    : `<p class="vacio">Ninguna receta propia coincide con el filtro.</p>`;
-  $("#lista-recetas").innerHTML = clasicas.length
-    ? clasicas.map(r => tarjetaReceta(r)).join("")
-    : `<p class="vacio">Ninguna receta coincide con el filtro.</p>`;
-  $("#lista-shots").innerHTML = shots.length
-    ? shots.map(r => tarjetaReceta(r)).join("")
-    : `<p class="vacio">Ningún chupito coincide con el filtro.</p>`;
+  if (subRecetas === "propias") {
+    const propias = filtrar(estado.recetasPropias);
+    $("#lista-recetas-propias").innerHTML = propias.length
+      ? propias.map(r => tarjetaReceta(r, { propia: true })).join("")
+      : `<p class="vacio">${estado.recetasPropias.length ? "Ninguna receta propia coincide con el filtro." : "Aún no tienes recetas propias. Créalas en ✨ Crear, con el generador de chupitos, o pulsando «Personalizar» en cualquier clásico."}</p>`;
+  } else if (subRecetas === "shots") {
+    const shots = filtrar(RECETAS_SHOTS);
+    $("#lista-shots").innerHTML = shots.length
+      ? shots.map(r => tarjetaReceta(r)).join("")
+      : `<p class="vacio">Ningún chupito coincide con el filtro.</p>`;
+  } else {
+    const clasicas = filtrar(RECETAS_CLASICAS);
+    $("#lista-recetas").innerHTML = clasicas.length
+      ? clasicas.map(r => tarjetaReceta(r)).join("")
+      : `<p class="vacio">Ninguna receta coincide con el filtro.</p>`;
+  }
 }
 
 // ---------- Personalizar / editar recetas en el formulario ----------
@@ -928,7 +968,7 @@ function guardarRecetaNueva(ev) {
   $("#nr-ingredientes").innerHTML = "";
   $("#vista-previa").innerHTML = "";
   renderCrear();
-  cambiarSeccion("recetas");
+  cambiarSeccion("recetas", "propias");
 }
 
 function vistaPrevia() {
@@ -1077,7 +1117,7 @@ function mostrarPropuesta(plantillaId) {
   $("#btn-guardar-propuesta").addEventListener("click", () => {
     estado.recetasPropias.push({ ...prop.receta, id: "propia-" + Date.now() });
     guardarEstado();
-    cambiarSeccion("recetas");
+    cambiarSeccion("recetas", "propias");
   });
   $("#btn-otra-propuesta").addEventListener("click", () => mostrarPropuesta(prop.plantilla.id));
   zona.scrollIntoView({ behavior: "smooth" });
@@ -1414,9 +1454,7 @@ function importarDatos(ev) {
 }
 
 function actualizarCabecera() {
-  $("#nombre-negocio").textContent = estado.nombreNegocio
-    ? " · " + estado.nombreNegocio
-    : "";
+  $("#nombre-negocio").textContent = estado.nombreNegocio ? " — " + estado.nombreNegocio : "";
 }
 
 // ---------- Inicio ----------
@@ -1424,7 +1462,14 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarEstado();
   actualizarCabecera();
 
-  $$("nav button").forEach(b => b.addEventListener("click", () => cambiarSeccion(b.dataset.sec)));
+  // Menú lateral (acordeón)
+  $("#btn-menu").addEventListener("click", abrirMenu);
+  $("#btn-cerrar-menu").addEventListener("click", cerrarMenu);
+  $("#menu-overlay").addEventListener("click", cerrarMenu);
+  $$("#menu-lateral .menu-titulo:not(.directo)").forEach(t =>
+    t.addEventListener("click", () => t.closest(".menu-grupo").classList.toggle("abierto")));
+  $$("#menu-lateral [data-sec]").forEach(b =>
+    b.addEventListener("click", () => cambiarSeccion(b.dataset.sec, b.dataset.sub)));
   $("#form-inventario").addEventListener("submit", agregarInventario);
   $("#form-receta").addEventListener("submit", guardarRecetaNueva);
   $("#btn-add-ing").addEventListener("click", () => {
