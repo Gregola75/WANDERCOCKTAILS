@@ -822,20 +822,65 @@ function aplicarModo() {
 
 function toggleModo() {
   if (esModoBarra()) {
-    const pin = prompt("PIN de máster para desbloquear:");
-    if (pin === null) return;
-    if (pin !== estado.pinMaster) { alert("PIN incorrecto."); return; }
-    estado.modo = "master";
+    mostrarEntrada("pin", "master"); // desbloquear: pedir PIN de máster
+  } else if (!estado.pinMaster) {
+    mostrarEntrada("pin", "bloquear"); // crear PIN antes de poder bloquear
   } else {
-    if (!estado.pinMaster) {
-      const pin = prompt("Crea un PIN de máster (mínimo 4 caracteres).\nSe pedirá para volver del modo barra al modo máster:");
-      if (!pin || pin.trim().length < 4) { alert("PIN no válido: necesita al menos 4 caracteres."); return; }
-      estado.pinMaster = pin.trim();
-    }
     estado.modo = "barra";
+    guardarEstado();
+    aplicarModo();
+  }
+}
+
+// ---------- Pantalla de entrada (¿quién abre la app?) ----------
+// El bartender entra directo a su guía; el máster entra con PIN.
+let pinDestino = "master"; // "master" (entrar/desbloquear) | "bloquear" (crear PIN y pasar a barra)
+
+function mostrarEntrada(vista = "opciones", destino = "master") {
+  pinDestino = destino;
+  $("#pantalla-entrada").classList.add("visible");
+  $("#entrada-negocio").textContent = estado.nombreNegocio || "";
+  const esPin = vista === "pin";
+  $("#entrada-opciones").style.display = esPin ? "none" : "";
+  $("#entrada-pin").style.display = esPin ? "" : "none";
+  if (esPin) {
+    const crear = !estado.pinMaster;
+    $("#entrada-pin-titulo").textContent = crear ? "Crea tu PIN de máster" : "PIN de máster";
+    $("#entrada-pin-ayuda").textContent = crear
+      ? "Mínimo 4 caracteres. Se pedirá siempre que alguien quiera entrar como máster."
+      : destino === "bloquear" ? "" : "Introduce tu PIN para entrar con control total.";
+    $("#entrada-pin-error").textContent = "";
+    $("#input-pin").value = "";
+    setTimeout(() => $("#input-pin").focus(), 150);
+  }
+}
+
+function ocultarEntrada() {
+  $("#pantalla-entrada").classList.remove("visible");
+}
+
+function confirmarPin() {
+  const pin = $("#input-pin").value.trim();
+  const error = $("#entrada-pin-error");
+  if (!estado.pinMaster) {
+    if (pin.length < 4) { error.textContent = "El PIN necesita al menos 4 caracteres."; return; }
+    estado.pinMaster = pin;
+    estado.modo = pinDestino === "bloquear" ? "barra" : "master";
+  } else {
+    if (pin !== estado.pinMaster) {
+      error.textContent = "PIN incorrecto.";
+      $("#input-pin").value = "";
+      const caja = $(".entrada-caja");
+      caja.classList.remove("sacudir");
+      void caja.offsetWidth;
+      caja.classList.add("sacudir");
+      return;
+    }
+    estado.modo = "master";
   }
   guardarEstado();
   aplicarModo();
+  ocultarEntrada();
 }
 
 function renderRecetas() {
@@ -1620,9 +1665,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   $("#btn-modo").addEventListener("click", toggleModo);
+  // Pantalla de entrada: se muestra en cada apertura para diferenciar quién entra
+  $("#btn-entrar-bartender").addEventListener("click", () => {
+    estado.modo = "barra";
+    guardarEstado();
+    aplicarModo();
+    ocultarEntrada();
+  });
+  $("#btn-entrar-master").addEventListener("click", () => mostrarEntrada("pin", "master"));
+  $("#btn-confirmar-pin").addEventListener("click", confirmarPin);
+  $("#input-pin").addEventListener("keydown", ev => { if (ev.key === "Enter") confirmarPin(); });
+  $("#btn-volver-entrada").addEventListener("click", () => mostrarEntrada("opciones"));
   $("#form-oferta").addEventListener("submit", guardarOferta);
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   aplicarModo();
+  mostrarEntrada();
 
   // PWA: funcionamiento offline e instalación en móvil/tablet
   if ("serviceWorker" in navigator) {

@@ -360,6 +360,32 @@
 
 </main>
 
+<!-- Pantalla de entrada: diferencia quién abre la app -->
+<div id="pantalla-entrada">
+  <div class="entrada-caja">
+    <div class="entrada-logo">🍸</div>
+    <h1 class="entrada-titulo">WANDER<span>COCKTAILS</span></h1>
+    <p class="entrada-sub" id="entrada-negocio"></p>
+
+    <div id="entrada-opciones">
+      <p class="entrada-pregunta">¿Quién abre la barra?</p>
+      <button class="btn entrada-btn" id="btn-entrar-bartender">👨‍🍳 Soy el bartender<small>Guía de cócteles y chupitos</small></button>
+      <button class="btn btn-sec entrada-btn" id="btn-entrar-master">🔑 Soy el máster<small>Control total con PIN</small></button>
+    </div>
+
+    <div id="entrada-pin" style="display:none">
+      <p class="entrada-pregunta" id="entrada-pin-titulo">PIN de máster</p>
+      <p class="entrada-ayuda" id="entrada-pin-ayuda"></p>
+      <input type="password" id="input-pin" maxlength="20" autocomplete="off" placeholder="••••">
+      <p class="entrada-error" id="entrada-pin-error"></p>
+      <div class="fila" style="justify-content:center">
+        <button class="btn" id="btn-confirmar-pin">Entrar</button>
+        <button class="btn btn-sec" id="btn-volver-entrada">Volver</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 <input type="file" id="input-foto" accept="image/*" capture="environment" style="display:none">

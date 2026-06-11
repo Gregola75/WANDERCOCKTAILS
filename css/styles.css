@@ -731,3 +731,78 @@ tr:last-child td { border-bottom: none; }
   .ficha { padding: 26px 22px; }
   .sabor-val { width: 100px; }
 }
+
+/* ---------- Pantalla de entrada ---------- */
+#pantalla-entrada {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(900px 400px at 80% -10%, rgba(217, 164, 65, .10), transparent 60%),
+    radial-gradient(700px 350px at 10% 110%, rgba(120, 70, 20, .12), transparent 55%),
+    #0b0805;
+}
+#pantalla-entrada.visible { display: flex; animation: aparecer .3s ease; }
+
+.entrada-caja {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  background: var(--card-g);
+  border: 1px solid var(--hairline);
+  border-radius: 22px;
+  padding: 38px 30px;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(240, 195, 107, .12);
+}
+.entrada-caja.sacudir { animation: sacudir .4s ease; }
+@keyframes sacudir {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-9px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-5px); }
+}
+
+.entrada-logo { font-size: 2.6rem; margin-bottom: 6px; filter: drop-shadow(0 6px 16px rgba(217, 164, 65, .35)); }
+.entrada-titulo {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 4px;
+  background: var(--gold-g);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.entrada-titulo span { -webkit-text-fill-color: var(--text); font-weight: 300; }
+.entrada-sub { color: var(--text-2); font-size: .8rem; font-style: italic; min-height: 1.2em; margin: 4px 0 18px; }
+.entrada-pregunta {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--gold-2);
+  margin-bottom: 16px;
+}
+.entrada-btn {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 14px 18px !important;
+  font-size: .98rem !important;
+}
+.entrada-btn small { font-weight: 400; font-size: .72rem; opacity: .8; letter-spacing: .3px; }
+.entrada-ayuda { color: var(--text-2); font-size: .78rem; margin-bottom: 14px; min-height: 1em; }
+#input-pin {
+  width: 180px;
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.entrada-error { color: var(--red); font-size: .8rem; min-height: 1.2em; margin-bottom: 10px; }
