@@ -23,6 +23,7 @@ let estado = {
   ofertas: [],          // [{id, nombre, recetaId, recetaId2, tipo: "2x1"|"descuento"|"precio"|"combo", valor}]
   pinMaster: "",        // PIN del máster: protege la vuelta desde el modo barra
   modo: "master",       // "master" (dueño: edita todo) | "barra" (bartender: solo guía)
+  fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
 };
 
 function cargarEstado() {
@@ -38,11 +39,16 @@ function cargarEstado() {
       ({ id: "mv-mig-" + i, tipo, ml }));
   }
   if (!estado.misVasos) estado.misVasos = [];
+  if (!estado.fotos) estado.fotos = {};
   delete estado.vasos;
 }
 
 function guardarEstado() {
-  localStorage.setItem(CLAVE_STORAGE, JSON.stringify(estado));
+  try {
+    localStorage.setItem(CLAVE_STORAGE, JSON.stringify(estado));
+  } catch (e) {
+    alert("No se pudo guardar: el almacenamiento del navegador está lleno. Quita alguna foto de receta para liberar espacio.");
+  }
 }
 
 // ---------- Utilidades ----------
@@ -211,9 +217,11 @@ function analizarDisponibilidad(receta) {
 // Subsecciones activas (acordeón del menú lateral)
 let subBarra = "vasos";      // "vasos" | "hielos"
 let subRecetas = "clasicas"; // "clasicas" | "propias" | "shots"
+let seccionActual = "barra";
 
 function cambiarSeccion(id, sub) {
   if (esModoBarra()) id = "recetas"; // en modo barra solo existe la guía de recetas
+  seccionActual = id;
   if (id === "barra" && sub) subBarra = sub;
   if (id === "recetas" && sub) subRecetas = sub;
 
@@ -686,8 +694,14 @@ function tarjetaReceta(receta, opciones = {}) {
     ? `<span class="tag tag-ok">✓ Disponible con tu inventario</span>`
     : `<span class="tag tag-mal">Falta: ${esc(disp.faltan.join(", "))}</span>`;
 
+  const foto = estado.fotos[receta.id];
+  const fotoHtml = foto
+    ? `<div class="receta-foto"><img src="${foto}" alt="${esc(receta.nombre)}" loading="lazy"></div>`
+    : `<div class="receta-foto placeholder"><span class="ph-vaso">${VASO_SVG[e.vasoUsado] || ""}</span><span class="ph-texto">referencia: ${esc(vasoPorId(e.vasoUsado).nombre.toLowerCase())}</span></div>`;
+
   return `
     <div class="card receta-card">
+      ${fotoHtml}
       <div class="cabecera">
         <h4>${esc(receta.nombre)}</h4>
         ${costeHtml}
@@ -715,6 +729,8 @@ function tarjetaReceta(receta, opciones = {}) {
       <div>${dispTag}</div>
       <div class="fila">
         ${recetaPorId(receta.id) ? `<button class="btn btn-mini" data-ficha="${receta.id}">👨‍🍳 Ficha de preparación</button>` : ""}
+        ${!barra && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-foto="${receta.id}">📷 ${foto ? "Cambiar" : "Foto"}</button>` : ""}
+        ${!barra && foto && recetaPorId(receta.id) ? `<button class="btn btn-peligro btn-mini" data-foto-quitar="${receta.id}">✕ Foto</button>` : ""}
         ${!barra && opciones.editable !== false && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-personalizar="${receta.id}">🛠 ${opciones.propia ? "Editar" : "Personalizar con mis marcas"}</button>` : ""}
         ${!barra && opciones.propia ? `<button class="btn btn-peligro btn-mini" data-borrar-receta="${receta.id}">Eliminar</button>` : ""}
       </div>
@@ -766,6 +782,7 @@ function abrirFicha(recetaId) {
     <div class="ficha">
       <button class="ficha-cerrar" title="Cerrar">✕</button>
       <div class="ficha-icono" title="${esc(vaso.nombre)}">${VASO_SVG[e.vasoUsado] || ""}</div>
+      ${estado.fotos[receta.id] ? `<img class="ficha-foto" src="${estado.fotos[receta.id]}" alt="${esc(receta.nombre)}">` : ""}
       <h2>${esc(receta.nombre)}</h2>
       <p class="meta">${esc(vaso.nombre)} · ${e.capacidad} ml · ${esc(tecnica.nombre)}</p>
       <ol class="ficha-pasos">
@@ -790,6 +807,9 @@ function abrirFicha(recetaId) {
 function aplicarModo() {
   const barra = esModoBarra();
   document.body.classList.toggle("modo-barra", barra);
+  const itemClasicas = $('#menu-lateral [data-sec="recetas"][data-sub="clasicas"]');
+  if (itemClasicas) itemClasicas.textContent = barra ? "🍹 Cócteles" : "Recetas clásicas";
+  if (barra && subRecetas === "propias") subRecetas = "clasicas";
   $("#btn-modo").textContent = barra ? "🔓 Soy el máster" : "🔒 Bloquear";
   $("#btn-modo").title = barra ? "Desbloquear modo máster (PIN)" : "Bloquear en modo barra para el equipo";
   $("#badge-modo").textContent = barra ? "MODO BARRA · solo guía" : "";
@@ -836,18 +856,29 @@ function renderRecetas() {
   $("#lista-recetas-propias").style.display = subRecetas === "propias" ? "" : "none";
   $("#lista-shots").style.display = subRecetas === "shots" ? "" : "none";
 
+  if (esModoBarra() && subRecetas === "propias") subRecetas = "clasicas";
+  $("#bloque-clasicas").querySelector("h2").textContent = esModoBarra() ? "Cócteles" : "Recetas clásicas";
+
   if (subRecetas === "propias") {
     const propias = filtrar(estado.recetasPropias);
     $("#lista-recetas-propias").innerHTML = propias.length
       ? propias.map(r => tarjetaReceta(r, { propia: true })).join("")
       : `<p class="vacio">${estado.recetasPropias.length ? "Ninguna receta propia coincide con el filtro." : "Aún no tienes recetas propias. Créalas en ✨ Crear, con el generador de chupitos, o pulsando «Personalizar» en cualquier clásico."}</p>`;
   } else if (subRecetas === "shots") {
-    const shots = filtrar(RECETAS_SHOTS);
+    // En modo barra, los chupitos de la casa se suman a la carta de shots
+    const lista = esModoBarra()
+      ? RECETAS_SHOTS.concat(estado.recetasPropias.filter(r => r.esShot))
+      : RECETAS_SHOTS;
+    const shots = filtrar(lista);
     $("#lista-shots").innerHTML = shots.length
       ? shots.map(r => tarjetaReceta(r)).join("")
       : `<p class="vacio">Ningún chupito coincide con el filtro.</p>`;
   } else {
-    const clasicas = filtrar(RECETAS_CLASICAS);
+    // En modo barra, los cócteles de la casa se muestran junto a los clásicos
+    const lista = esModoBarra()
+      ? RECETAS_CLASICAS.concat(estado.recetasPropias.filter(r => !r.esShot))
+      : RECETAS_CLASICAS;
+    const clasicas = filtrar(lista);
     $("#lista-recetas").innerHTML = clasicas.length
       ? clasicas.map(r => tarjetaReceta(r)).join("")
       : `<p class="vacio">Ninguna receta coincide con el filtro.</p>`;
@@ -1543,10 +1574,42 @@ document.addEventListener("DOMContentLoaded", () => {
       row.querySelector(".ing-marca").innerHTML = opcionesMarcaHtml(ev.target.value, "");
     }
   });
-  // Ficha de preparación, personalizar clásicos y borrar propias (delegado)
+  // Fotos de recetas: el máster fotografía el cóctel servido como referencia
+  let fotoObjetivo = null;
+  $("#input-foto").addEventListener("change", ev => {
+    const archivo = ev.target.files[0];
+    ev.target.value = "";
+    if (!archivo || !fotoObjetivo) return;
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 640; // se comprime para caber en el almacenamiento del navegador
+      const factor = Math.min(1, MAX / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * factor);
+      c.height = Math.round(img.height * factor);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      estado.fotos[fotoObjetivo] = c.toDataURL("image/jpeg", 0.72);
+      URL.revokeObjectURL(img.src);
+      fotoObjetivo = null;
+      guardarEstado();
+      cambiarSeccion(seccionActual);
+    };
+    img.src = URL.createObjectURL(archivo);
+  });
+
+  // Ficha de preparación, fotos, personalizar y borrar (delegado)
   document.addEventListener("click", ev => {
     const f = ev.target.closest("[data-ficha]");
     if (f) { abrirFicha(f.dataset.ficha); return; }
+    const fo = ev.target.closest("[data-foto]");
+    if (fo && !esModoBarra()) { fotoObjetivo = fo.dataset.foto; $("#input-foto").click(); return; }
+    const fq = ev.target.closest("[data-foto-quitar]");
+    if (fq && !esModoBarra()) {
+      delete estado.fotos[fq.dataset.fotoQuitar];
+      guardarEstado();
+      cambiarSeccion(seccionActual);
+      return;
+    }
     const p = ev.target.closest("[data-personalizar]");
     if (p) { if (!esModoBarra()) cargarEnEditor(p.dataset.personalizar); return; }
     const b = ev.target.closest("[data-borrar-receta]");

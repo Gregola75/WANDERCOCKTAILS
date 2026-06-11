@@ -628,6 +628,47 @@ tr:last-child td { border-bottom: none; }
 
 /* ---------- Modo barra: solo la guía de recetas ---------- */
 .modo-barra .menu-grupo:not([data-grupo="recetas"]) { display: none; }
+.modo-barra [data-sec="recetas"][data-sub="propias"] { display: none; }
+
+/* ---------- Fotos de recetas ---------- */
+.receta-foto {
+  margin: -18px -20px 6px;
+  height: 150px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.receta-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.receta-foto.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 110px;
+  background:
+    radial-gradient(220px 90px at 50% 110%, rgba(217, 164, 65, .16), transparent 70%),
+    linear-gradient(170deg, #1a130c, #221910);
+  border-bottom: 1px solid var(--hairline);
+}
+.receta-foto.placeholder .ph-vaso { color: var(--gold); opacity: .85; }
+.receta-foto.placeholder .ph-vaso svg { width: 36px; height: 54px; }
+.receta-foto.placeholder .ph-texto {
+  font-size: .62rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  opacity: .7;
+}
+
+.ficha-foto {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+  margin: 14px 0 4px;
+  border: 1px solid var(--hairline);
+}
 
 /* ---------- Ficha de preparación ---------- */
 .ficha-overlay {
