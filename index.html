@@ -376,7 +376,11 @@
     <div id="entrada-pin" style="display:none">
       <p class="entrada-pregunta" id="entrada-pin-titulo">PIN de máster</p>
       <p class="entrada-ayuda" id="entrada-pin-ayuda"></p>
-      <input type="password" id="input-pin" maxlength="20" inputmode="numeric" autocomplete="off" placeholder="••••">
+      <!-- type=text + one-time-code: evita que el gestor de contraseñas del
+           móvil rellene el PIN solo; los puntos los pone el CSS -->
+      <input type="text" id="input-pin" maxlength="20" inputmode="numeric"
+             autocomplete="one-time-code" name="wc-pin" data-lpignore="true"
+             spellcheck="false" placeholder="••••">
       <p class="entrada-error" id="entrada-pin-error"></p>
       <div class="fila" style="justify-content:center">
         <button class="btn" id="btn-confirmar-pin">Entrar</button>

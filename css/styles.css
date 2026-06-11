@@ -818,3 +818,7 @@ tr:last-child td { border-bottom: none; }
   cursor: pointer;
 }
 .enlace-olvido:hover { color: var(--red); }
+
+/* El PIN se enmascara con CSS (el campo no es type=password para que el
+   gestor de contraseñas del móvil no lo rellene automáticamente) */
+#input-pin { -webkit-text-security: disc; }
