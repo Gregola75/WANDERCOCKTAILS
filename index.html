@@ -348,6 +348,45 @@
       </div>
     </form>
 
+    <h3>🌩 Base de datos en la nube (Firebase)</h3>
+    <p class="sub">Conecta tu Firebase y todos tus dispositivos (móvil, iPad, tablet del bar) compartirán los mismos datos al instante: vasos, inventario, recetas, fotos, precios y PIN. Funciona también sin conexión y se sincroniza al volver internet.<br>Estado: <b id="nube-estado">…</b></p>
+
+    <div class="form-receta">
+      <div id="nube-paso-config">
+        <div class="campo">
+          <label>Pega aquí el bloque «firebaseConfig» de tu consola de Firebase</label>
+          <textarea id="nube-config" rows="5" style="width:100%" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", appId: "..." };'></textarea>
+        </div>
+        <button type="button" class="btn" id="btn-nube-config">Guardar configuración</button>
+        <p class="meta" style="margin-top:10px">¿De dónde saco esto? console.firebase.google.com → tu proyecto → ⚙️ Configuración del proyecto → «Tus apps» → app web (&lt;/&gt;) → bloque firebaseConfig.</p>
+      </div>
+
+      <div id="nube-paso-login" style="display:none">
+        <div class="fila">
+          <div class="campo">
+            <label>Correo</label>
+            <input type="email" id="nube-email" autocomplete="username" style="width:230px" placeholder="tu@correo.com">
+          </div>
+          <div class="campo">
+            <label>Contraseña (mín. 6)</label>
+            <input type="password" id="nube-pass" autocomplete="current-password" style="width:180px">
+          </div>
+        </div>
+        <div class="fila">
+          <button type="button" class="btn" id="btn-nube-entrar">Iniciar sesión</button>
+          <button type="button" class="btn btn-sec" id="btn-nube-crear">Crear cuenta</button>
+        </div>
+        <p class="meta" style="margin-top:8px">Una sola cuenta para todo tu negocio: inicia sesión con la misma en cada dispositivo.</p>
+      </div>
+
+      <div id="nube-paso-sesion" style="display:none">
+        <div class="fila">
+          <button type="button" class="btn btn-sec" id="btn-nube-salir">Cerrar sesión</button>
+          <button type="button" class="btn btn-peligro" id="btn-nube-quitar">Desconectar nube de este dispositivo</button>
+        </div>
+      </div>
+    </div>
+
     <h3>Copia de seguridad</h3>
     <p class="sub">Exporta la configuración completa (vasos, hielos, inventario y recetas) para compartirla entre establecimientos y que todos sirvan igual.</p>
     <div class="fila">
@@ -393,6 +432,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/nube.js"></script>
 <input type="file" id="input-foto" accept="image/*" capture="environment" style="display:none">
 </body>
 </html>

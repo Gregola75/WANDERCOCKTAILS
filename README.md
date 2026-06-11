@@ -120,6 +120,29 @@ Cada receta tiene el botón **«Ficha de preparación»**: una ficha a pantalla 
 - Icono propio y pantalla completa sin barra de navegador (`display: standalone`).
 - Requisito: servirse por **HTTPS** (GitHub Pages lo cumple). Al publicar cambios, subir la versión de `CACHE` en `sw.js`.
 
+### 🌩 Base de datos en la nube (Firebase, opcional)
+- En Ajustes se pega el bloque `firebaseConfig` del proyecto de Firebase del negocio y se crea una cuenta (email + contraseña).
+- A partir de ahí **todos los dispositivos con sesión iniciada comparten los datos en tiempo real**: vasos, inventario, recetas, ofertas, fotos y PIN. El modo máster/barra sigue siendo por dispositivo.
+- Funciona offline (caché persistente de Firestore): los cambios se suben al volver la conexión. Conflictos: gana la última escritura.
+- Estructura en Firestore: `negocios/{uid}` (configuración, con contador de revisión) y `negocios/{uid}/fotos/{recetaId}` (una foto por documento).
+- Reglas de seguridad recomendadas (cada cuenta solo accede a lo suyo):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /negocios/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      match /fotos/{foto} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}
+```
+
+- Sin configuración de nube, la app funciona 100 % local como siempre.
+
 ## Uso
 
 No requiere instalación ni servidor: es una aplicación 100 % cliente.

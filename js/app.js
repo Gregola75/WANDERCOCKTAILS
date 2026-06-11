@@ -24,6 +24,8 @@ let estado = {
   pinMaster: "",        // PIN del máster: protege la vuelta desde el modo barra
   modo: "master",       // "master" (dueño: edita todo) | "barra" (bartender: solo guía)
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
+  rev: 0,               // revisión de los datos (para la sincronización en la nube)
+  nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
 };
 
 function cargarEstado() {
@@ -44,11 +46,13 @@ function cargarEstado() {
 }
 
 function guardarEstado() {
+  if (!window.__nubeRemoto) estado.rev = (estado.rev || 0) + 1;
   try {
     localStorage.setItem(CLAVE_STORAGE, JSON.stringify(estado));
   } catch (e) {
     alert("No se pudo guardar: el almacenamiento del navegador está lleno. Quita alguna foto de receta para liberar espacio.");
   }
+  if (!window.__nubeRemoto && typeof nubeProgramarSubida === "function") nubeProgramarSubida();
 }
 
 // ---------- Utilidades ----------
@@ -1598,10 +1602,8 @@ function importarDatos(ev) {
       const datos = JSON.parse(lector.result);
       estado = Object.assign(estado, datos);
       guardarEstado();
-      actualizarCabecera();
-      aplicarModo();
-      cambiarSeccion("barra");
       alert("Configuración importada correctamente.");
+      location.reload();
     } catch (e) {
       alert("El archivo no es una configuración válida.");
     }

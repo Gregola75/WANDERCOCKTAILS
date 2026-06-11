@@ -2,13 +2,14 @@
    Estrategia "stale-while-revalidate": sirve de caché al instante y
    actualiza en segundo plano, así la barra nunca se queda sin la guía.
    Al publicar cambios, subir la versión de CACHE para renovar la caché. */
-const CACHE = "wandercocktails-v8";
+const CACHE = "wandercocktails-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/styles.css",
   "./js/data.js",
   "./js/app.js",
+  "./js/nube.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -35,9 +36,13 @@ self.addEventListener("fetch", ev => {
       cache.match(ev.request).then(enCache => {
         const red = fetch(ev.request)
           .then(resp => {
-            if (resp.ok && new URL(ev.request.url).origin === self.location.origin) {
-              cache.put(ev.request, resp.clone());
-            }
+            const url = ev.request.url;
+            const cacheable = resp.ok && (
+              new URL(url).origin === self.location.origin ||
+              url.startsWith("https://www.gstatic.com/firebasejs/") ||
+              url.startsWith("https://fonts.g")
+            );
+            if (cacheable) cache.put(ev.request, resp.clone());
             return resp;
           })
           .catch(() => enCache);
