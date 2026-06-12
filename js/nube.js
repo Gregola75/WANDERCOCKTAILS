@@ -230,93 +230,6 @@ async function nubeAcceder(crear) {
   }
 }
 
-// ---------- Equipo: el máster crea las cuentas de sus bartenders ----------
-// Crea el usuario en una instancia secundaria de Firebase para no cerrar
-// la sesión del máster, registra su acceso de solo lectura y lo añade al equipo.
-async function nubeCrearUsuarioEmpleado(email, pass) {
-  const sec = nube.appM.initializeApp(nube.cfg, "alta-" + Date.now());
-  try {
-    const secAuth = nube.authM.getAuth(sec);
-    await nube.authM.createUserWithEmailAndPassword(secAuth, email, pass);
-    await nube.authM.signOut(secAuth);
-  } finally {
-    if (nube.appM.deleteApp) { try { await nube.appM.deleteApp(sec); } catch (e) {} }
-  }
-}
-
-async function nubeAgregarEquipo() {
-  if (nube.rol !== "master") return;
-  const inpE = $("#equipo-email");
-  const inpP = $("#equipo-pass");
-  const email = inpE.value.trim().toLowerCase();
-  const pass = inpP.value;
-  if (!email || !email.includes("@")) { nubeUi("Escribe un correo válido para el bartender."); return; }
-  if (!pass || pass.length < 6) { nubeUi("Ponle una contraseña de al menos 6 caracteres (se la das tú al empleado)."); return; }
-  estado.equipo = estado.equipo || [];
-  if (estado.equipo.includes(email)) { nubeUi("Ese correo ya está en el equipo."); return; }
-  try {
-    nubeUi("Creando la cuenta del bartender…");
-    // 1. Registrar el acceso de solo lectura (lo escribe el máster)
-    const { doc, setDoc } = nube.fs;
-    await setDoc(doc(nube.db, "accesos", email), { negocioId: nube.user.uid });
-    // 2. Crear la cuenta de acceso del empleado (si no existía ya)
-    let aviso = "✓ " + email + " creado. Dale al empleado su correo y la contraseña: solo tiene que iniciar sesión.";
-    try {
-      await nubeCrearUsuarioEmpleado(email, pass);
-    } catch (e) {
-      if (e.code === "auth/email-already-in-use") {
-        aviso = "✓ " + email + " añadido (ya tenía cuenta; usará su contraseña actual).";
-      } else { throw e; }
-    }
-    estado.equipo.push(email);
-    guardarEstado();
-    inpE.value = "";
-    inpP.value = "";
-    nubeUi(aviso);
-  } catch (e) {
-    nubeUi("No se pudo añadir: " + (e.code || e.message));
-  }
-}
-
-async function nubeQuitarEquipo(email) {
-  if (nube.rol !== "master") return;
-  if (!confirm("¿Quitar a " + email + " del equipo? Dejará de ver los datos del negocio.")) return;
-  try {
-    const { doc, deleteDoc } = nube.fs;
-    await deleteDoc(doc(nube.db, "accesos", email));
-    estado.equipo = (estado.equipo || []).filter(e => e !== email);
-    guardarEstado();
-    nubeUi("Quitado del equipo.");
-  } catch (e) {
-    nubeUi("No se pudo quitar: " + (e.code || e.message));
-  }
-}
-
-// Inicio de sesión desde la pantalla de entrada (correo del bartender o del máster)
-async function nubeAccederEntrada() {
-  const email = $("#entrada-email").value.trim();
-  const pass = $("#entrada-pass").value;
-  const error = $("#entrada-login-error");
-  if (!email || !pass) { error.textContent = "Escribe correo y contraseña."; return; }
-  error.textContent = "";
-  $("#btn-entrada-login").disabled = true;
-  try {
-    // Esperar a que el SDK esté listo (por si acaba de arrancar)
-    for (let i = 0; i < 40 && !nube.listo; i++) await new Promise(r => setTimeout(r, 200));
-    if (!nube.listo) { error.textContent = "Sin conexión con la nube. Inténtalo de nuevo."; return; }
-    await nube.authM.signInWithEmailAndPassword(nube.auth, email, pass);
-    $("#entrada-pass").value = "";
-    estado.modo = "barra";
-    window.__nubeRemoto = true; guardarEstado(); window.__nubeRemoto = false;
-    aplicarModo();
-    ocultarEntrada();
-  } catch (e) {
-    error.textContent = ERRORES_AUTH[e.code] || "Error: " + (e.code || e.message);
-  } finally {
-    $("#btn-entrada-login").disabled = false;
-  }
-}
-
 async function nubeSalir() {
   if (nube.authM && nube.auth) await nube.authM.signOut(nube.auth);
   nubeUi();
@@ -379,20 +292,11 @@ function nubeUi(mensaje) {
   $("#nube-paso-config").style.display = cfg ? "none" : "";
   $("#nube-paso-login").style.display = cfg && nube.listo && !nube.user ? "" : "none";
   $("#nube-paso-sesion").style.display = cfg && nube.user ? "" : "none";
-  const esMaster = nube.user && nube.rol === "master";
-  $("#nube-equipo").style.display = esMaster ? "" : "none";
-  if (esMaster) {
-    $("#equipo-lista").innerHTML = (estado.equipo || []).length
-      ? estado.equipo.map(e =>
-        `<div class="ing-linea"><span>👨‍🍳 ${e}</span><button class="btn btn-peligro btn-mini" data-equipo-quitar="${e}">Quitar</button></div>`).join("")
-      : `<p class="vacio">Aún no hay bartenders asignados.</p>`;
-  }
   if (mensaje) elEstado.textContent = mensaje;
   else if (!cfg) elEstado.textContent = "Sin configurar: la app funciona solo en este dispositivo.";
   else if (!nube.listo) elEstado.textContent = "Cargando Firebase…";
   else if (!nube.user) elEstado.textContent = "Configurada. Inicia sesión para sincronizar.";
-  else if (nube.rol === "bartender") elEstado.textContent = "🟢 Conectado como " + (nube.user.email || "") + " (bartender, solo lectura).";
-  else elEstado.textContent = "🟢 Conectado como " + (nube.user.email || "") + " (máster) — todo se sincroniza solo.";
+  else elEstado.textContent = "🟢 Conectado — el negocio se sincroniza solo en todos los dispositivos.";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -401,13 +305,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-nube-crear").addEventListener("click", () => nubeAcceder(true));
   $("#btn-nube-salir").addEventListener("click", nubeSalir);
   $("#btn-nube-quitar").addEventListener("click", nubeQuitarConfig);
-  $("#btn-equipo-add").addEventListener("click", nubeAgregarEquipo);
   $("#btn-entrada-login").addEventListener("click", nubeAccederEntrada);
   $("#entrada-pass").addEventListener("keydown", ev => { if (ev.key === "Enter") nubeAccederEntrada(); });
   $("#btn-volver-login").addEventListener("click", () => mostrarEntrada("opciones"));
-  $("#equipo-lista").addEventListener("click", ev => {
-    const b = ev.target.closest("[data-equipo-quitar]");
-    if (b) nubeQuitarEquipo(b.dataset.equipoQuitar);
-  });
   nubeInit();
 });

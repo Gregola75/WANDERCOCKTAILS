@@ -26,7 +26,8 @@ let estado = {
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
   rev: 0,               // revisión de los datos (para la sincronización en la nube)
   nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
-  equipo: [],           // correos de los bartenders con acceso de solo lectura
+  equipo: [],           // [{id, nombre, pin, rol: "bartender"|"master"}] -> tu gente
+  usuarioActual: "",    // quién entró en ESTE dispositivo (no se sincroniza)
 };
 
 function cargarEstado() {
@@ -43,6 +44,8 @@ function cargarEstado() {
   }
   if (!estado.misVasos) estado.misVasos = [];
   if (!estado.fotos) estado.fotos = {};
+  // migración: el equipo antiguo eran correos (texto); ahora son personas
+  estado.equipo = (estado.equipo || []).filter(m => m && typeof m === "object" && m.nombre);
   delete estado.vasos;
 }
 
@@ -818,7 +821,9 @@ function aplicarModo() {
   if (barra && subRecetas === "propias") subRecetas = "clasicas";
   $("#btn-modo").textContent = barra ? "🔓 Soy el máster" : "🔒 Bloquear";
   $("#btn-modo").title = barra ? "Desbloquear modo máster (PIN)" : "Bloquear en modo barra para el equipo";
-  $("#badge-modo").textContent = barra ? "MODO BARRA · solo guía" : "";
+  $("#badge-modo").textContent = barra
+    ? "MODO BARRA" + (estado.usuarioActual ? " · " + estado.usuarioActual : "")
+    : (estado.usuarioActual ? "MÁSTER · " + estado.usuarioActual : "");
   if (barra) {
     cambiarSeccion("recetas");
   } else {
@@ -859,12 +864,17 @@ function mostrarEntrada(vista = "opciones", destino = "master") {
     setTimeout(() => $("#entrada-email").focus(), 150);
   }
   if (esPin) {
-    const crear = !estado.pinMaster;
-    $("#entrada-pin-titulo").textContent = crear ? "Inventa tu PIN de máster" : "PIN de máster";
-    $("#entrada-pin-ayuda").textContent = crear
-      ? "Es la primera vez: escribe un código NUEVO de 4 a 6 números (ej. 2580) y pulsa Entrar. Apúntalo: será tu llave de máster."
-      : "Introduce tu PIN para entrar con control total.";
-    $("#btn-olvido-pin").style.display = crear ? "none" : "";
+    const crear = !estado.pinMaster && destino !== "bartender";
+    if (destino === "bartender") {
+      $("#entrada-pin-titulo").textContent = "Tu PIN de bartender";
+      $("#entrada-pin-ayuda").textContent = "Introduce el PIN que te asignó el máster.";
+    } else {
+      $("#entrada-pin-titulo").textContent = crear ? "Inventa tu PIN de máster" : "PIN de máster";
+      $("#entrada-pin-ayuda").textContent = crear
+        ? "Es la primera vez: escribe un código NUEVO de 4 a 6 números (ej. 2580) y pulsa Entrar. Apúntalo: será tu llave de máster."
+        : "Introduce tu PIN para entrar con control total.";
+    }
+    $("#btn-olvido-pin").style.display = crear || destino === "bartender" ? "none" : "";
     $("#entrada-pin-error").textContent = "";
     $("#input-pin").value = "";
     setTimeout(() => $("#input-pin").focus(), 150);
@@ -878,6 +888,27 @@ function ocultarEntrada() {
 function confirmarPin() {
   const pin = $("#input-pin").value.trim();
   const error = $("#entrada-pin-error");
+
+  // Entrada de bartender: valida contra los PIN del equipo
+  if (pinDestino === "bartender") {
+    const miembro = (estado.equipo || []).find(m => m.rol === "bartender" && m.pin === pin);
+    if (!miembro) {
+      error.textContent = "PIN no reconocido. Pídele el tuyo al máster.";
+      $("#input-pin").value = "";
+      const caja = $(".entrada-caja");
+      caja.classList.remove("sacudir");
+      void caja.offsetWidth;
+      caja.classList.add("sacudir");
+      return;
+    }
+    estado.usuarioActual = miembro.nombre;
+    estado.modo = "barra";
+    guardarEstado();
+    aplicarModo();
+    ocultarEntrada();
+    return;
+  }
+
   if (!estado.pinMaster) {
     // Creación en dos pasos: inventar el PIN y repetirlo para confirmar
     if (pinTemporal === null) {
@@ -901,7 +932,8 @@ function confirmarPin() {
     estado.pinMaster = pin;
     estado.modo = pinDestino === "bloquear" ? "barra" : "master";
   } else {
-    if (pin !== estado.pinMaster) {
+    const miembroMaster = (estado.equipo || []).find(m => m.rol === "master" && m.pin === pin);
+    if (pin !== estado.pinMaster && !miembroMaster) {
       error.textContent = "PIN incorrecto.";
       $("#input-pin").value = "";
       const caja = $(".entrada-caja");
@@ -910,6 +942,7 @@ function confirmarPin() {
       caja.classList.add("sacudir");
       return;
     }
+    estado.usuarioActual = miembroMaster ? miembroMaster.nombre : "";
     estado.modo = "master";
   }
   guardarEstado();
@@ -1548,7 +1581,44 @@ function guardarOferta(ev) {
 }
 
 // ---------- Ajustes ----------
+function renderEquipo() {
+  const cont = $("#lista-equipo");
+  cont.innerHTML = (estado.equipo || []).length
+    ? estado.equipo.map(m => `
+      <div class="ing-linea">
+        <span>${m.rol === "master" ? "🔑" : "👨‍🍳"} <b>${esc(m.nombre)}</b> · ${m.rol === "master" ? "máster" : "bartender"} · PIN ${esc(m.pin)}</span>
+        <button class="btn btn-peligro btn-mini" data-eq-quitar="${m.id}">Quitar</button>
+      </div>`).join("")
+    : `<p class="vacio">Aún no has creado a nadie. Añade a tu gente con nombre, PIN y rol.</p>`;
+  cont.querySelectorAll("[data-eq-quitar]").forEach(b => b.addEventListener("click", () => {
+    const m = estado.equipo.find(x => x.id === b.dataset.eqQuitar);
+    if (!confirm(`¿Quitar a ${m ? m.nombre : "este miembro"} del equipo? Su PIN dejará de funcionar en todos los dispositivos.`)) return;
+    estado.equipo = estado.equipo.filter(x => x.id !== b.dataset.eqQuitar);
+    guardarEstado();
+    renderEquipo();
+  }));
+}
+
+function agregarMiembroEquipo() {
+  const nombre = $("#eq-nombre").value.trim();
+  const pin = $("#eq-pin").value.trim();
+  const rol = $("#eq-rol").value;
+  const aviso = $("#eq-aviso");
+  aviso.textContent = "";
+  if (!nombre) { aviso.textContent = "Ponle nombre."; return; }
+  if (pin.length < 4) { aviso.textContent = "El PIN necesita al menos 4 números."; return; }
+  if (pin === estado.pinMaster) { aviso.textContent = "Ese PIN ya es el tuyo de máster: elige otro."; return; }
+  if ((estado.equipo || []).some(m => m.pin === pin)) { aviso.textContent = "Ese PIN ya está asignado a otra persona."; return; }
+  estado.equipo = estado.equipo || [];
+  estado.equipo.push({ id: "eq-" + Date.now(), nombre, pin, rol });
+  guardarEstado();
+  $("#eq-nombre").value = "";
+  $("#eq-pin").value = "";
+  renderEquipo();
+}
+
 function renderAjustes() {
+  renderEquipo();
   $("#aj-pin").value = "";
   $("#aj-pin").placeholder = estado.pinMaster ? "PIN configurado ✓ (escribe para cambiarlo)" : "Sin PIN: crea uno";
   $("#aj-nombre").value = estado.nombreNegocio;
@@ -1709,6 +1779,11 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.innerHTML = original;
       if (!nubeHayUsuario()) { mostrarEntrada("login"); return; }
     }
+    if ((estado.equipo || []).some(m => m.rol === "bartender")) {
+      mostrarEntrada("pin", "bartender");
+      return;
+    }
+    estado.usuarioActual = "";
     estado.modo = "barra";
     guardarEstado();
     aplicarModo();
@@ -1763,6 +1838,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#filtro-recetas").addEventListener("input", renderRecetas);
   $("#filtro-posibles").addEventListener("change", renderRecetas);
   $("#form-ajustes").addEventListener("submit", guardarAjustes);
+  $("#btn-eq-add").addEventListener("click", agregarMiembroEquipo);
   $("#btn-exportar").addEventListener("click", exportarDatos);
   $("#input-importar").addEventListener("change", importarDatos);
 

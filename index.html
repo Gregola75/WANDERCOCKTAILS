@@ -348,6 +348,34 @@
       </div>
     </form>
 
+    <h3>👥 Mi equipo</h3>
+    <p class="sub">Crea a tu gente con <b>nombre, PIN y rol</b>. En la pantalla de entrada, cada uno toca su botón y pone su PIN: los <b>bartenders</b> entran a la guía (solo cócteles y chupitos, sin tocar nada) y los <b>másters</b> entran con control total. El equipo se sincroniza con la nube: los PINes valen en todos los dispositivos del negocio.</p>
+    <div class="form-receta">
+      <div class="fila">
+        <div class="campo">
+          <label>Nombre</label>
+          <input type="text" id="eq-nombre" placeholder="Ej: Juan" style="width:160px">
+        </div>
+        <div class="campo">
+          <label>PIN (4-6 números)</label>
+          <input type="text" id="eq-pin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="1234" style="width:110px">
+        </div>
+        <div class="campo">
+          <label>Rol</label>
+          <select id="eq-rol">
+            <option value="bartender">👨‍🍳 Bartender (solo guía)</option>
+            <option value="master">🔑 Máster (control total)</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>&nbsp;</label>
+          <button type="button" class="btn" id="btn-eq-add">+ Añadir al equipo</button>
+        </div>
+      </div>
+      <p class="entrada-error" id="eq-aviso" style="text-align:left"></p>
+      <div id="lista-equipo"></div>
+    </div>
+
     <h3>🌩 Base de datos en la nube (Firebase)</h3>
     <p class="sub">Conecta tu Firebase y todos tus dispositivos (móvil, iPad, tablet del bar) compartirán los mismos datos al instante: vasos, inventario, recetas, fotos, precios y PIN. Funciona también sin conexión y se sincroniza al volver internet.<br>Estado: <b id="nube-estado">…</b></p>
 
@@ -380,18 +408,6 @@
       </div>
 
       <div id="nube-paso-sesion" style="display:none">
-        <div id="nube-equipo" style="display:none">
-          <div class="campo">
-            <label>👥 Mi equipo — bartenders con acceso (solo guía, nunca pueden editar)</label>
-            <div id="equipo-lista"></div>
-            <div class="fila" style="margin-top:8px">
-              <input type="email" id="equipo-email" placeholder="correo@empleado.com" style="width:210px">
-              <input type="text" id="equipo-pass" placeholder="contraseña (mín. 6)" style="width:170px">
-              <button type="button" class="btn btn-sec btn-mini" id="btn-equipo-add">+ Crear bartender</button>
-            </div>
-            <p class="meta" style="margin-top:8px">Tú creas la cuenta: pon un correo y una contraseña, pulsa «Crear bartender» y entrégaselos al empleado. Él solo abre la app, pega la configuración de la nube y toca <b>«Iniciar sesión»</b> con esos datos — su app queda en modo bartender (solo cócteles y chupitos), viendo siempre tus últimos datos.<br>💡 ¿Quieres una sola cuenta para toda la barra? Crea un único bartender, por ejemplo <b>barra@tunegocio.com</b>, y úsalo en todas las tablets.</p>
-          </div>
-        </div>
         <div class="fila" style="margin-top:12px">
           <button type="button" class="btn btn-sec" id="btn-nube-salir">Cerrar sesión</button>
           <button type="button" class="btn btn-peligro" id="btn-nube-quitar">Desconectar nube de este dispositivo</button>
