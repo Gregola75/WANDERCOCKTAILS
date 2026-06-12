@@ -36,6 +36,8 @@ async function nubeInit() {
       import(NUBE_SDK + "firebase-firestore.js"),
     ]);
     const app = appM.initializeApp(cfg);
+    nube.appM = appM;
+    nube.cfg = cfg;
     nube.auth = authM.getAuth(app);
     try {
       nube.db = fsM.initializeFirestore(app, {
@@ -205,21 +207,49 @@ async function nubeAcceder(crear) {
   }
 }
 
-// ---------- Equipo: bartenders con acceso de solo lectura ----------
+// ---------- Equipo: el máster crea las cuentas de sus bartenders ----------
+// Crea el usuario en una instancia secundaria de Firebase para no cerrar
+// la sesión del máster, registra su acceso de solo lectura y lo añade al equipo.
+async function nubeCrearUsuarioEmpleado(email, pass) {
+  const sec = nube.appM.initializeApp(nube.cfg, "alta-" + Date.now());
+  try {
+    const secAuth = nube.authM.getAuth(sec);
+    await nube.authM.createUserWithEmailAndPassword(secAuth, email, pass);
+    await nube.authM.signOut(secAuth);
+  } finally {
+    if (nube.appM.deleteApp) { try { await nube.appM.deleteApp(sec); } catch (e) {} }
+  }
+}
+
 async function nubeAgregarEquipo() {
   if (nube.rol !== "master") return;
-  const inp = $("#equipo-email");
-  const email = inp.value.trim().toLowerCase();
+  const inpE = $("#equipo-email");
+  const inpP = $("#equipo-pass");
+  const email = inpE.value.trim().toLowerCase();
+  const pass = inpP.value;
   if (!email || !email.includes("@")) { nubeUi("Escribe un correo válido para el bartender."); return; }
+  if (!pass || pass.length < 6) { nubeUi("Ponle una contraseña de al menos 6 caracteres (se la das tú al empleado)."); return; }
   estado.equipo = estado.equipo || [];
   if (estado.equipo.includes(email)) { nubeUi("Ese correo ya está en el equipo."); return; }
   try {
+    nubeUi("Creando la cuenta del bartender…");
+    // 1. Registrar el acceso de solo lectura (lo escribe el máster)
     const { doc, setDoc } = nube.fs;
     await setDoc(doc(nube.db, "accesos", email), { negocioId: nube.user.uid });
+    // 2. Crear la cuenta de acceso del empleado (si no existía ya)
+    let aviso = "✓ " + email + " creado. Dale al empleado su correo y la contraseña: solo tiene que iniciar sesión.";
+    try {
+      await nubeCrearUsuarioEmpleado(email, pass);
+    } catch (e) {
+      if (e.code === "auth/email-already-in-use") {
+        aviso = "✓ " + email + " añadido (ya tenía cuenta; usará su contraseña actual).";
+      } else { throw e; }
+    }
     estado.equipo.push(email);
     guardarEstado();
-    inp.value = "";
-    nubeUi("✓ " + email + " añadido al equipo");
+    inpE.value = "";
+    inpP.value = "";
+    nubeUi(aviso);
   } catch (e) {
     nubeUi("No se pudo añadir: " + (e.code || e.message));
   }
