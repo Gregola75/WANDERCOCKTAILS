@@ -1768,17 +1768,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#btn-modo").addEventListener("click", toggleModo);
   // Pantalla de entrada: se muestra en cada apertura para diferenciar quién entra
-  $("#btn-entrar-bartender").addEventListener("click", async () => {
-    const btn = $("#btn-entrar-bartender");
-    if (typeof nubeHayConfig === "function" && nubeHayConfig() && !nubeHayUsuario()) {
-      btn.disabled = true;
-      const original = btn.innerHTML;
-      btn.innerHTML = "⏳ Conectando…";
-      await nubeEsperarAuth(); // espera a saber si ya había sesión guardada
-      btn.disabled = false;
-      btn.innerHTML = original;
-      if (!nubeHayUsuario()) { mostrarEntrada("login"); return; }
-    }
+  $("#btn-entrar-bartender").addEventListener("click", () => {
     if ((estado.equipo || []).some(m => m.rol === "bartender")) {
       mostrarEntrada("pin", "bartender");
       return;
@@ -1789,6 +1779,8 @@ document.addEventListener("DOMContentLoaded", () => {
     aplicarModo();
     ocultarEntrada();
   });
+  // Conectar el dispositivo al negocio (solo la primera vez, con el correo del máster)
+  $("#btn-conectar-dispositivo").addEventListener("click", () => mostrarEntrada("login"));
   $("#btn-entrar-master").addEventListener("click", () => mostrarEntrada("pin", "master"));
   $("#btn-confirmar-pin").addEventListener("click", confirmarPin);
   $("#input-pin").addEventListener("keydown", ev => { if (ev.key === "Enter") confirmarPin(); });

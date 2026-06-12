@@ -438,11 +438,12 @@
       <p class="entrada-pregunta">¿Quién abre la barra?</p>
       <button class="btn entrada-btn" id="btn-entrar-bartender">👨‍🍳 Soy el bartender<small>Guía de cócteles y chupitos</small></button>
       <button class="btn btn-sec entrada-btn" id="btn-entrar-master">🔑 Soy el máster<small>Control total con PIN</small></button>
+      <button class="enlace-olvido" id="btn-conectar-dispositivo" style="display:none">📡 Conectar este dispositivo al negocio (primera vez)</button>
     </div>
 
     <div id="entrada-login" style="display:none">
-      <p class="entrada-pregunta">Inicia sesión</p>
-      <p class="entrada-ayuda">Escribe el correo y la contraseña que te dio el máster del negocio.</p>
+      <p class="entrada-pregunta">Conectar dispositivo</p>
+      <p class="entrada-ayuda">Solo la primera vez en cada aparato: inicia sesión con el correo y la contraseña del máster del negocio. Después, todos entran con su PIN.</p>
       <input type="email" id="entrada-email" placeholder="correo" autocomplete="username" style="width:230px;margin-bottom:10px">
       <input type="password" id="entrada-pass" placeholder="contraseña" autocomplete="current-password" style="width:230px;margin-bottom:10px">
       <p class="entrada-error" id="entrada-login-error"></p>

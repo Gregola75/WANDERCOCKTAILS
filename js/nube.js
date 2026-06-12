@@ -230,6 +230,31 @@ async function nubeAcceder(crear) {
   }
 }
 
+// Conectar el dispositivo al negocio desde la pantalla de entrada
+// (solo la primera vez, con el correo del máster). Al conectar, vuelve
+// a la pantalla de elección para que cada uno entre con su PIN.
+async function nubeAccederEntrada() {
+  const email = $("#entrada-email").value.trim();
+  const pass = $("#entrada-pass").value;
+  const error = $("#entrada-login-error");
+  if (!email || !pass) { error.textContent = "Escribe correo y contraseña."; return; }
+  error.textContent = "";
+  $("#btn-entrada-login").disabled = true;
+  try {
+    // Esperar a que el SDK esté listo (por si acaba de arrancar)
+    for (let i = 0; i < 40 && !nube.listo; i++) await new Promise(r => setTimeout(r, 200));
+    if (!nube.listo) { error.textContent = "Sin conexión con la nube. Inténtalo de nuevo."; return; }
+    await nube.authM.signInWithEmailAndPassword(nube.auth, email, pass);
+    $("#entrada-pass").value = "";
+    $("#entrada-email").value = "";
+    mostrarEntrada("opciones"); // dispositivo conectado: ahora cada uno entra con su PIN
+  } catch (e) {
+    error.textContent = ERRORES_AUTH[e.code] || "Error: " + (e.code || e.message);
+  } finally {
+    $("#btn-entrada-login").disabled = false;
+  }
+}
+
 async function nubeSalir() {
   if (nube.authM && nube.auth) await nube.authM.signOut(nube.auth);
   nubeUi();
