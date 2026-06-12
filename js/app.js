@@ -1768,7 +1768,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#btn-modo").addEventListener("click", toggleModo);
   // Pantalla de entrada: se muestra en cada apertura para diferenciar quién entra
-  $("#btn-entrar-bartender").addEventListener("click", () => {
+  // ¿Este dispositivo aún no está conectado al negocio? Entonces lo primero
+  // es iniciar sesión con el correo; después ya se elige máster o bartender.
+  window.__omitirConexion = false;
+  async function requiereConexion() {
+    if (window.__omitirConexion) return false;
+    if (typeof nubeHayConfig !== "function" || !nubeHayConfig()) return false;
+    await nubeEsperarAuth();
+    return !nubeHayUsuario();
+  }
+
+  $("#btn-entrar-bartender").addEventListener("click", async () => {
+    if (await requiereConexion()) { mostrarEntrada("login"); return; }
     if ((estado.equipo || []).some(m => m.rol === "bartender")) {
       mostrarEntrada("pin", "bartender");
       return;
@@ -1781,7 +1792,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   // Conectar el dispositivo al negocio (solo la primera vez, con el correo del máster)
   $("#btn-conectar-dispositivo").addEventListener("click", () => mostrarEntrada("login"));
-  $("#btn-entrar-master").addEventListener("click", () => mostrarEntrada("pin", "master"));
+  $("#btn-omitir-conexion").addEventListener("click", () => {
+    window.__omitirConexion = true;
+    mostrarEntrada("opciones");
+  });
+  $("#btn-entrar-master").addEventListener("click", async () => {
+    if (await requiereConexion()) { mostrarEntrada("login"); return; }
+    mostrarEntrada("pin", "master");
+  });
   $("#btn-confirmar-pin").addEventListener("click", confirmarPin);
   $("#input-pin").addEventListener("keydown", ev => { if (ev.key === "Enter") confirmarPin(); });
   $("#btn-volver-entrada").addEventListener("click", () => mostrarEntrada("opciones"));
@@ -1795,6 +1813,11 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   aplicarModo();
   mostrarEntrada();
+  requiereConexion().then(necesita => {
+    const visible = $("#pantalla-entrada").classList.contains("visible");
+    const enOpciones = $("#entrada-opciones").style.display !== "none";
+    if (necesita && visible && enOpciones) mostrarEntrada("login");
+  });
 
   // PWA: funcionamiento offline e instalación en móvil/tablet
   if ("serviceWorker" in navigator) {
