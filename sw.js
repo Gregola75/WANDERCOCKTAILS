@@ -2,7 +2,7 @@
    Estrategia "stale-while-revalidate": sirve de caché al instante y
    actualiza en segundo plano, así la barra nunca se queda sin la guía.
    Al publicar cambios, subir la versión de CACHE para renovar la caché. */
-const CACHE = "wandercocktails-v15";
+const CACHE = "wandercocktails-v16";
 const APP_SHELL = [
   "./",
   "./index.html",

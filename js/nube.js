@@ -60,6 +60,7 @@ async function nubeInit() {
     nube.appM = appM;
     nube.cfg = cfg;
     nube.auth = authM.getAuth(app);
+    nube.auth.languageCode = "es"; // correos de recuperación en español
     try {
       nube.db = fsM.initializeFirestore(app, {
         localCache: fsM.persistentLocalCache({ tabManager: fsM.persistentMultipleTabManager() }),
@@ -255,6 +256,29 @@ async function nubeAccederEntrada() {
   }
 }
 
+// Recuperar contraseña: Firebase envía un correo para crear una nueva.
+// Los datos no se pierden: viven en la cuenta, no en la contraseña.
+async function nubeRecuperarPass(origen) {
+  const inpEmail = origen === "ajustes" ? $("#nube-email") : $("#entrada-email");
+  const salida = origen === "ajustes" ? null : $("#entrada-login-error");
+  const aviso = txt => { if (salida) salida.textContent = txt; else nubeUi(txt); };
+  const email = inpEmail.value.trim();
+  if (!email || !email.includes("@")) {
+    aviso("Escribe arriba tu correo y vuelve a tocar «¿Olvidaste la contraseña?».");
+    return;
+  }
+  try {
+    for (let i = 0; i < 40 && !nube.listo; i++) await new Promise(r => setTimeout(r, 200));
+    if (!nube.listo) { aviso("Sin conexión con la nube. Inténtalo de nuevo."); return; }
+    await nube.authM.sendPasswordResetEmail(nube.auth, email);
+    aviso("📬 Enviado: revisa el correo de " + email + " (mira también en spam) y sigue el enlace para crear una contraseña nueva. Tus datos no se pierden.");
+  } catch (e) {
+    aviso(e.code === "auth/user-not-found"
+      ? "No existe ninguna cuenta con ese correo."
+      : ERRORES_AUTH[e.code] || "Error: " + (e.code || e.message));
+  }
+}
+
 async function nubeSalir() {
   if (nube.authM && nube.auth) await nube.authM.signOut(nube.auth);
   nubeUi();
@@ -333,5 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-entrada-login").addEventListener("click", nubeAccederEntrada);
   $("#entrada-pass").addEventListener("keydown", ev => { if (ev.key === "Enter") nubeAccederEntrada(); });
   $("#btn-volver-login").addEventListener("click", () => mostrarEntrada("opciones"));
+  $("#btn-olvido-pass").addEventListener("click", () => nubeRecuperarPass("entrada"));
+  $("#btn-olvido-pass-aj").addEventListener("click", () => nubeRecuperarPass("ajustes"));
   nubeInit();
 });
