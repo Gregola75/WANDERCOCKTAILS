@@ -171,14 +171,30 @@ async function nubeSalir() {
 }
 
 // ---------- Configuración pegada desde la consola de Firebase ----------
+// Acepta el snippet completo de la consola (con imports y todo): localiza
+// el objeto que sigue a "firebaseConfig" y lo extrae emparejando llaves.
+function nubeExtraerConfig(texto) {
+  let ini = texto.indexOf("firebaseConfig");
+  ini = texto.indexOf("{", ini >= 0 ? ini : 0);
+  if (ini < 0) return null;
+  let nivel = 0;
+  for (let i = ini; i < texto.length; i++) {
+    if (texto[i] === "{") nivel++;
+    if (texto[i] === "}") {
+      nivel--;
+      if (nivel === 0) return texto.slice(ini, i + 1);
+    }
+  }
+  return null;
+}
+
 function nubeGuardarConfig() {
   const texto = $("#nube-config").value;
-  const ini = texto.indexOf("{");
-  const fin = texto.lastIndexOf("}");
-  if (ini < 0 || fin < ini) { nubeUi("Pega el bloque completo, con sus llaves { }."); return; }
+  const bloque = nubeExtraerConfig(texto);
+  if (!bloque) { nubeUi("Pega el bloque firebaseConfig completo, con sus llaves { }."); return; }
   let cfg;
   try {
-    cfg = Function('"use strict"; return (' + texto.slice(ini, fin + 1) + ")")();
+    cfg = Function('"use strict"; return (' + bloque + ")")();
   } catch (e) {
     nubeUi("No se pudo leer la configuración. Pega el bloque firebaseConfig tal cual sale en la consola de Firebase.");
     return;
