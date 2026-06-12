@@ -26,6 +26,7 @@ let estado = {
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
   rev: 0,               // revisión de los datos (para la sincronización en la nube)
   nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
+  equipo: [],           // correos de los bartenders con acceso de solo lectura
 };
 
 function cargarEstado() {
@@ -74,7 +75,7 @@ function fmtDinero(n) {
 function todasRecetas() {
   return RECETAS_CLASICAS.concat(RECETAS_SHOTS, estado.recetasPropias);
 }
-const esModoBarra = () => estado.modo === "barra";
+const esModoBarra = () => window.__rolNube === "bartender" || estado.modo === "barra";
 function recetaPorId(id) {
   return todasRecetas().find(r => r.id === id);
 }
@@ -811,6 +812,7 @@ function abrirFicha(recetaId) {
 function aplicarModo() {
   const barra = esModoBarra();
   document.body.classList.toggle("modo-barra", barra);
+  $("#btn-modo").style.display = window.__rolNube === "bartender" ? "none" : "";
   const itemClasicas = $('#menu-lateral [data-sec="recetas"][data-sub="clasicas"]');
   if (itemClasicas) itemClasicas.textContent = barra ? "🍹 Cócteles" : "Recetas clásicas";
   if (barra && subRecetas === "propias") subRecetas = "clasicas";

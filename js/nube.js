@@ -13,13 +13,16 @@ const NUBE_SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
 const CAMPOS_SYNC = [
   "nombreNegocio", "misVasos", "hielos", "diluciones", "llenadoPct",
   "margen", "moneda", "inventario", "recetasPropias", "ofertas",
-  "pinMaster", "rev",
+  "pinMaster", "equipo", "rev",
 ];
 
 const nube = {
   listo: false, user: null, db: null, auth: null,
   fs: null, authM: null, timer: null, unsub: [], fotoMeta: {},
+  rol: null,        // "master" (dueño del negocio) | "bartender" (solo lectura)
+  negocioId: null,  // uid del negocio cuyos datos se leen
 };
+window.__rolNube = null;
 window.__nubeRemoto = false; // evita re-subir lo que acaba de llegar
 
 async function nubeInit() {
@@ -45,12 +48,20 @@ async function nubeInit() {
     nube.authM = authM;
     nube.listo = true;
     try { nube.fotoMeta = JSON.parse(localStorage.getItem("wc-nube-fotos") || "{}"); } catch (e) { nube.fotoMeta = {}; }
-    authM.onAuthStateChanged(nube.auth, u => {
+    authM.onAuthStateChanged(nube.auth, async u => {
       nube.user = u;
       nube.unsub.forEach(f => f());
       nube.unsub = [];
-      if (u) nubeEscuchar();
+      if (u) {
+        await nubeDetectarRol();
+        nubeEscuchar();
+      } else {
+        nube.rol = null;
+        nube.negocioId = null;
+        window.__rolNube = null;
+      }
       nubeUi();
+      aplicarModo();
     });
   } catch (e) {
     console.warn("Nube no disponible:", e);
@@ -58,26 +69,55 @@ async function nubeInit() {
   }
 }
 
+// ---------- Rol: máster (dueño) o bartender (asignado por correo) ----------
+async function nubeDetectarRol() {
+  const { doc, getDoc } = nube.fs;
+  nube.rol = "master";
+  nube.negocioId = nube.user.uid;
+  try {
+    const email = (nube.user.email || "").toLowerCase();
+    const acc = await getDoc(doc(nube.db, "accesos", email));
+    if (acc.exists() && acc.data().negocioId) {
+      nube.rol = "bartender";
+      nube.negocioId = acc.data().negocioId;
+    }
+  } catch (e) { /* sin acceso: queda como master de su propio espacio */ }
+  window.__rolNube = nube.rol;
+  if (nube.rol === "bartender" && estado.modo !== "barra") {
+    estado.modo = "barra";
+    window.__nubeRemoto = true;
+    guardarEstado();
+    window.__nubeRemoto = false;
+  }
+}
+
 // ---------- Escucha en tiempo real ----------
 function nubeEscuchar() {
   const { doc, collection, onSnapshot } = nube.fs;
-  const refDoc = doc(nube.db, "negocios", nube.user.uid);
+  const refDoc = doc(nube.db, "negocios", nube.negocioId);
 
   nube.unsub.push(onSnapshot(refDoc, snap => {
     if (snap.metadata.hasPendingWrites) return;
     const datos = snap.data();
-    if (!datos) { nubeProgramarSubida(100); return; } // primera vez: sube lo local
-    if ((datos.rev || 0) <= (estado.rev || 0)) return;
+    if (!datos) {
+      if (nube.rol === "master") nubeProgramarSubida(100); // primera vez: sube lo local
+      return;
+    }
+    if ((datos.rev || 0) <= (estado.rev || 0) && nube.rol === "master") return;
+    if ((datos.rev || 0) === (estado.rev || 0)) return;
     window.__nubeRemoto = true;
-    CAMPOS_SYNC.forEach(c => { if (datos[c] !== undefined && datos[c] !== null) estado[c] = datos[c]; });
+    CAMPOS_SYNC.forEach(c => {
+      if (c === "pinMaster" && nube.rol === "bartender") return; // el PIN no baja a bartenders
+      if (datos[c] !== undefined && datos[c] !== null) estado[c] = datos[c];
+    });
     guardarEstado();
     window.__nubeRemoto = false;
     actualizarCabecera();
     cambiarSeccion(seccionActual);
     nubeUi("✓ Actualizado desde la nube");
-  }, e => nubeUi("Error de lectura: " + e.code)));
+  }, e => nubeUi("Error de lectura: " + (e.code || e.message))));
 
-  nube.unsub.push(onSnapshot(collection(nube.db, "negocios", nube.user.uid, "fotos"), snap => {
+  nube.unsub.push(onSnapshot(collection(nube.db, "negocios", nube.negocioId, "fotos"), snap => {
     let cambio = false;
     snap.docChanges().forEach(ch => {
       if (ch.doc.metadata.hasPendingWrites) return;
@@ -106,13 +146,13 @@ function nubeEscuchar() {
 
 // ---------- Subida (con espera para agrupar cambios) ----------
 function nubeProgramarSubida(ms = 1200) {
-  if (!nube.user) return;
+  if (!nube.user || nube.rol !== "master") return;
   clearTimeout(nube.timer);
   nube.timer = setTimeout(nubeSubir, ms);
 }
 
 async function nubeSubir() {
-  if (!nube.user) return;
+  if (!nube.user || nube.rol !== "master") return;
   try {
     const { doc, setDoc, deleteDoc } = nube.fs;
     const datos = {};
@@ -162,6 +202,40 @@ async function nubeAcceder(crear) {
     $("#nube-pass").value = "";
   } catch (e) {
     nubeUi(ERRORES_AUTH[e.code] || "Error: " + e.code);
+  }
+}
+
+// ---------- Equipo: bartenders con acceso de solo lectura ----------
+async function nubeAgregarEquipo() {
+  if (nube.rol !== "master") return;
+  const inp = $("#equipo-email");
+  const email = inp.value.trim().toLowerCase();
+  if (!email || !email.includes("@")) { nubeUi("Escribe un correo válido para el bartender."); return; }
+  estado.equipo = estado.equipo || [];
+  if (estado.equipo.includes(email)) { nubeUi("Ese correo ya está en el equipo."); return; }
+  try {
+    const { doc, setDoc } = nube.fs;
+    await setDoc(doc(nube.db, "accesos", email), { negocioId: nube.user.uid });
+    estado.equipo.push(email);
+    guardarEstado();
+    inp.value = "";
+    nubeUi("✓ " + email + " añadido al equipo");
+  } catch (e) {
+    nubeUi("No se pudo añadir: " + (e.code || e.message));
+  }
+}
+
+async function nubeQuitarEquipo(email) {
+  if (nube.rol !== "master") return;
+  if (!confirm("¿Quitar a " + email + " del equipo? Dejará de ver los datos del negocio.")) return;
+  try {
+    const { doc, deleteDoc } = nube.fs;
+    await deleteDoc(doc(nube.db, "accesos", email));
+    estado.equipo = (estado.equipo || []).filter(e => e !== email);
+    guardarEstado();
+    nubeUi("Quitado del equipo.");
+  } catch (e) {
+    nubeUi("No se pudo quitar: " + (e.code || e.message));
   }
 }
 
@@ -227,11 +301,20 @@ function nubeUi(mensaje) {
   $("#nube-paso-config").style.display = cfg ? "none" : "";
   $("#nube-paso-login").style.display = cfg && nube.listo && !nube.user ? "" : "none";
   $("#nube-paso-sesion").style.display = cfg && nube.user ? "" : "none";
+  const esMaster = nube.user && nube.rol === "master";
+  $("#nube-equipo").style.display = esMaster ? "" : "none";
+  if (esMaster) {
+    $("#equipo-lista").innerHTML = (estado.equipo || []).length
+      ? estado.equipo.map(e =>
+        `<div class="ing-linea"><span>👨‍🍳 ${e}</span><button class="btn btn-peligro btn-mini" data-equipo-quitar="${e}">Quitar</button></div>`).join("")
+      : `<p class="vacio">Aún no hay bartenders asignados.</p>`;
+  }
   if (mensaje) elEstado.textContent = mensaje;
   else if (!cfg) elEstado.textContent = "Sin configurar: la app funciona solo en este dispositivo.";
   else if (!nube.listo) elEstado.textContent = "Cargando Firebase…";
   else if (!nube.user) elEstado.textContent = "Configurada. Inicia sesión para sincronizar.";
-  else elEstado.textContent = "🟢 Conectado como " + (nube.user.email || "") + " — todo se sincroniza solo.";
+  else if (nube.rol === "bartender") elEstado.textContent = "🟢 Conectado como " + (nube.user.email || "") + " (bartender, solo lectura).";
+  else elEstado.textContent = "🟢 Conectado como " + (nube.user.email || "") + " (máster) — todo se sincroniza solo.";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -240,5 +323,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-nube-crear").addEventListener("click", () => nubeAcceder(true));
   $("#btn-nube-salir").addEventListener("click", nubeSalir);
   $("#btn-nube-quitar").addEventListener("click", nubeQuitarConfig);
+  $("#btn-equipo-add").addEventListener("click", nubeAgregarEquipo);
+  $("#equipo-lista").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-equipo-quitar]");
+    if (b) nubeQuitarEquipo(b.dataset.equipoQuitar);
+  });
   nubeInit();
 });
