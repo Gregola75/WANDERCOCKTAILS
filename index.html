@@ -424,6 +424,18 @@
       <button class="btn btn-sec entrada-btn" id="btn-entrar-master">🔑 Soy el máster<small>Control total con PIN</small></button>
     </div>
 
+    <div id="entrada-login" style="display:none">
+      <p class="entrada-pregunta">Inicia sesión</p>
+      <p class="entrada-ayuda">Escribe el correo y la contraseña que te dio el máster del negocio.</p>
+      <input type="email" id="entrada-email" placeholder="correo" autocomplete="username" style="width:230px;margin-bottom:10px">
+      <input type="password" id="entrada-pass" placeholder="contraseña" autocomplete="current-password" style="width:230px;margin-bottom:10px">
+      <p class="entrada-error" id="entrada-login-error"></p>
+      <div class="fila" style="justify-content:center">
+        <button class="btn" id="btn-entrada-login">Entrar</button>
+        <button class="btn btn-sec" id="btn-volver-login">Volver</button>
+      </div>
+    </div>
+
     <div id="entrada-pin" style="display:none">
       <p class="entrada-pregunta" id="entrada-pin-titulo">PIN de máster</p>
       <p class="entrada-ayuda" id="entrada-pin-ayuda"></p>

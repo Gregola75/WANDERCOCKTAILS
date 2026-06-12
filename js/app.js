@@ -850,8 +850,14 @@ function mostrarEntrada(vista = "opciones", destino = "master") {
   $("#pantalla-entrada").classList.add("visible");
   $("#entrada-negocio").textContent = estado.nombreNegocio || "";
   const esPin = vista === "pin";
-  $("#entrada-opciones").style.display = esPin ? "none" : "";
+  const esLogin = vista === "login";
+  $("#entrada-opciones").style.display = esPin || esLogin ? "none" : "";
   $("#entrada-pin").style.display = esPin ? "" : "none";
+  $("#entrada-login").style.display = esLogin ? "" : "none";
+  if (esLogin) {
+    $("#entrada-login-error").textContent = "";
+    setTimeout(() => $("#entrada-email").focus(), 150);
+  }
   if (esPin) {
     const crear = !estado.pinMaster;
     $("#entrada-pin-titulo").textContent = crear ? "Inventa tu PIN de máster" : "PIN de máster";
@@ -1692,7 +1698,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("#btn-modo").addEventListener("click", toggleModo);
   // Pantalla de entrada: se muestra en cada apertura para diferenciar quién entra
-  $("#btn-entrar-bartender").addEventListener("click", () => {
+  $("#btn-entrar-bartender").addEventListener("click", async () => {
+    const btn = $("#btn-entrar-bartender");
+    if (typeof nubeHayConfig === "function" && nubeHayConfig() && !nubeHayUsuario()) {
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.innerHTML = "⏳ Conectando…";
+      await nubeEsperarAuth(); // espera a saber si ya había sesión guardada
+      btn.disabled = false;
+      btn.innerHTML = original;
+      if (!nubeHayUsuario()) { mostrarEntrada("login"); return; }
+    }
     estado.modo = "barra";
     guardarEstado();
     aplicarModo();

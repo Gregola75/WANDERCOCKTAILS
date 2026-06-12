@@ -8,6 +8,19 @@
    ========================================================= */
 
 const NUBE_SDK = "https://www.gstatic.com/firebasejs/10.12.2/";
+
+// Configuración por defecto del negocio: integrada para que ningún
+// dispositivo tenga que pegarla. Es config pública de cliente (la
+// protección real son las reglas de Firestore y las contraseñas).
+const NUBE_CONFIG_DEFECTO = {
+  apiKey: "AIzaSyAxFyZvoK0rKP5bxqvGStsYoEsbugHlDPI",
+  authDomain: "wandercoctel.firebaseapp.com",
+  projectId: "wandercoctel",
+  storageBucket: "wandercoctel.firebasestorage.app",
+  messagingSenderId: "641950578392",
+  appId: "1:641950578392:web:929c5f8d6a357d732ac9ad",
+};
+const nubeConfigActiva = () => estado.nubeConfig || NUBE_CONFIG_DEFECTO;
 // Campos del estado que viajan a la nube (las fotos van aparte;
 // el modo máster/barra es propio de cada dispositivo)
 const CAMPOS_SYNC = [
@@ -22,13 +35,21 @@ const nube = {
   rol: null,        // "master" (dueño del negocio) | "bartender" (solo lectura)
   negocioId: null,  // uid del negocio cuyos datos se leen
 };
+nube.authPromesa = new Promise(res => { nube._resAuth = res; });
+// Para la pantalla de entrada: ¿hay nube y hace falta iniciar sesión?
+window.nubeEsperarAuth = () => Promise.race([
+  nube.authPromesa,
+  new Promise(res => setTimeout(res, 6000)),
+]);
+window.nubeHayUsuario = () => !!nube.user;
+window.nubeHayConfig = () => !!nubeConfigActiva();
 window.__rolNube = null;
 window.__nubeRemoto = false; // evita re-subir lo que acaba de llegar
 
 async function nubeInit() {
-  const cfg = estado.nubeConfig;
+  const cfg = nubeConfigActiva();
   nubeUi();
-  if (!cfg) return;
+  if (!cfg) { nube._resAuth && nube._resAuth(); return; }
   try {
     const [appM, authM, fsM] = await Promise.all([
       import(NUBE_SDK + "firebase-app.js"),
@@ -64,10 +85,12 @@ async function nubeInit() {
       }
       nubeUi();
       aplicarModo();
+      nube._resAuth && nube._resAuth();
     });
   } catch (e) {
     console.warn("Nube no disponible:", e);
     nubeUi("No se pudo cargar Firebase (revisa la conexión o la configuración). La app sigue funcionando en local.");
+    nube._resAuth && nube._resAuth();
   }
 }
 
@@ -269,6 +292,31 @@ async function nubeQuitarEquipo(email) {
   }
 }
 
+// Inicio de sesión desde la pantalla de entrada (correo del bartender o del máster)
+async function nubeAccederEntrada() {
+  const email = $("#entrada-email").value.trim();
+  const pass = $("#entrada-pass").value;
+  const error = $("#entrada-login-error");
+  if (!email || !pass) { error.textContent = "Escribe correo y contraseña."; return; }
+  error.textContent = "";
+  $("#btn-entrada-login").disabled = true;
+  try {
+    // Esperar a que el SDK esté listo (por si acaba de arrancar)
+    for (let i = 0; i < 40 && !nube.listo; i++) await new Promise(r => setTimeout(r, 200));
+    if (!nube.listo) { error.textContent = "Sin conexión con la nube. Inténtalo de nuevo."; return; }
+    await nube.authM.signInWithEmailAndPassword(nube.auth, email, pass);
+    $("#entrada-pass").value = "";
+    estado.modo = "barra";
+    window.__nubeRemoto = true; guardarEstado(); window.__nubeRemoto = false;
+    aplicarModo();
+    ocultarEntrada();
+  } catch (e) {
+    error.textContent = ERRORES_AUTH[e.code] || "Error: " + (e.code || e.message);
+  } finally {
+    $("#btn-entrada-login").disabled = false;
+  }
+}
+
 async function nubeSalir() {
   if (nube.authM && nube.auth) await nube.authM.signOut(nube.auth);
   nubeUi();
@@ -327,7 +375,7 @@ function nubeQuitarConfig() {
 function nubeUi(mensaje) {
   const elEstado = $("#nube-estado");
   if (!elEstado) return;
-  const cfg = estado.nubeConfig;
+  const cfg = nubeConfigActiva();
   $("#nube-paso-config").style.display = cfg ? "none" : "";
   $("#nube-paso-login").style.display = cfg && nube.listo && !nube.user ? "" : "none";
   $("#nube-paso-sesion").style.display = cfg && nube.user ? "" : "none";
@@ -354,6 +402,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btn-nube-salir").addEventListener("click", nubeSalir);
   $("#btn-nube-quitar").addEventListener("click", nubeQuitarConfig);
   $("#btn-equipo-add").addEventListener("click", nubeAgregarEquipo);
+  $("#btn-entrada-login").addEventListener("click", nubeAccederEntrada);
+  $("#entrada-pass").addEventListener("keydown", ev => { if (ev.key === "Enter") nubeAccederEntrada(); });
+  $("#btn-volver-login").addEventListener("click", () => mostrarEntrada("opciones"));
   $("#equipo-lista").addEventListener("click", ev => {
     const b = ev.target.closest("[data-equipo-quitar]");
     if (b) nubeQuitarEquipo(b.dataset.equipoQuitar);
