@@ -26,6 +26,7 @@ let estado = {
   pinMaster: "",        // PIN del máster: protege la vuelta desde el modo barra
   modo: "master",       // "master" (dueño: edita todo) | "barra" (bartender: solo guía)
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
+  ocultas: {},          // { recetaId: true } -> recetas que el bartender NO ve (fuera de carta)
   rev: 0,               // revisión de los datos (para la sincronización en la nube)
   nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
   equipo: [],           // [{id, nombre, pin, rol: "bartender"|"master"}] -> tu gente
@@ -46,6 +47,7 @@ function cargarEstado() {
   }
   if (!estado.misVasos) estado.misVasos = [];
   if (!estado.fotos) estado.fotos = {};
+  if (!estado.ocultas) estado.ocultas = {};
   // migración: el equipo antiguo eran correos (texto); ahora son personas
   estado.equipo = (estado.equipo || []).filter(m => m && typeof m === "object" && m.nombre);
   delete estado.vasos;
@@ -91,6 +93,7 @@ function todasRecetas() {
   return RECETAS_CLASICAS.concat(RECETAS_SHOTS, estado.recetasPropias);
 }
 const esModoBarra = () => window.__rolNube === "bartender" || estado.modo === "barra";
+const enCarta = id => !(estado.ocultas && estado.ocultas[id]); // visible para el bartender
 function recetaPorId(id) {
   return todasRecetas().find(r => r.id === id);
 }
@@ -237,6 +240,7 @@ function analizarDisponibilidad(receta) {
 // Subsecciones activas (acordeón del menú lateral)
 let subBarra = "vasos";      // "vasos" | "hielos"
 let subRecetas = "clasicas"; // "clasicas" | "propias" | "shots"
+let filtroCarta = "todas";   // máster: "todas" | "carta" | "ocultas"
 let seccionActual = "barra";
 
 function cambiarSeccion(id, sub) {
@@ -769,8 +773,12 @@ function tarjetaReceta(receta, opciones = {}) {
     ? `<div class="receta-foto"><img src="${foto}" alt="${esc(receta.nombre)}" loading="lazy"></div>`
     : `<div class="receta-foto placeholder"><span class="ph-vaso">${VASO_SVG[e.vasoUsado] || ""}</span><span class="ph-texto">referencia: ${esc(vasoPorId(e.vasoUsado).nombre.toLowerCase())}</span></div>`;
 
+  const oculta = !enCarta(receta.id);
+  const cartaBtn = !barra
+    ? `<button class="btn btn-mini ${oculta ? "btn-sec" : ""}" data-carta="${receta.id}" title="${oculta ? "Activar: el bartender la verá" : "Quitar de la carta del bartender"}">${oculta ? "🚫 Fuera de carta" : "✓ En carta"}</button>`
+    : "";
   return `
-    <div class="card receta-card">
+    <div class="card receta-card ${oculta && !barra ? "fuera-carta" : ""}">
       ${fotoHtml}
       <div class="cabecera">
         <h4>${esc(receta.nombre)}</h4>
@@ -798,6 +806,7 @@ function tarjetaReceta(receta, opciones = {}) {
       ${receta.pasos ? `<p class="pasos">${esc(receta.pasos)}</p>` : ""}
       <div>${dispTag}</div>
       <div class="fila">
+        ${cartaBtn}
         ${recetaPorId(receta.id) ? `<button class="btn btn-mini" data-ficha="${receta.id}">👨‍🍳 Ficha de preparación</button>` : ""}
         ${!barra && recetaPorId(receta.id) ? `<button class="btn btn-sec btn-mini" data-foto="${receta.id}">📷 ${foto ? "Cambiar" : "Foto"}</button>` : ""}
         ${!barra && foto && recetaPorId(receta.id) ? `<button class="btn btn-peligro btn-mini" data-foto-quitar="${receta.id}">✕ Foto</button>` : ""}
@@ -1015,12 +1024,31 @@ function confirmarPin() {
 function renderRecetas() {
   const filtro = $("#filtro-recetas").value.toLowerCase();
   const soloPosibles = $("#filtro-posibles").checked;
+  const barra = esModoBarra();
 
   const filtrar = lista => lista.filter(r => {
     if (filtro && !r.nombre.toLowerCase().includes(filtro)) return false;
     if (soloPosibles && !analizarDisponibilidad(r).posibles) return false;
+    if (barra && !enCarta(r.id)) return false;        // el bartender solo ve la carta activa
+    if (!barra && filtroCarta === "carta" && !enCarta(r.id)) return false;
+    if (!barra && filtroCarta === "ocultas" && enCarta(r.id)) return false;
     return true;
   });
+
+  // Filtro de carta (solo el máster): Todas / En carta / Ocultas
+  const barraFiltro = $("#filtro-carta");
+  if (barraFiltro) {
+    barraFiltro.style.display = barra ? "none" : "";
+    const todas = todasRecetas();
+    const nVis = todas.filter(r => enCarta(r.id)).length;
+    barraFiltro.innerHTML =
+      `<button class="chip ${filtroCarta === "todas" ? "activo" : ""}" data-fcarta="todas">Todas (${todas.length})</button>` +
+      `<button class="chip ${filtroCarta === "carta" ? "activo" : ""}" data-fcarta="carta">✓ En carta (${nVis})</button>` +
+      `<button class="chip ${filtroCarta === "ocultas" ? "activo" : ""}" data-fcarta="ocultas">🚫 Ocultas (${todas.length - nVis})</button>`;
+    barraFiltro.querySelectorAll("[data-fcarta]").forEach(b => b.addEventListener("click", () => {
+      filtroCarta = b.dataset.fcarta; renderRecetas();
+    }));
+  }
 
   // Mostrar solo la sublista elegida en el menú (clásicas / propias / chupitos)
   $("#bloque-clasicas").style.display = subRecetas === "clasicas" ? "" : "none";
@@ -1817,6 +1845,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", ev => {
     const f = ev.target.closest("[data-ficha]");
     if (f) { abrirFicha(f.dataset.ficha); return; }
+    const ca = ev.target.closest("[data-carta]");
+    if (ca && !esModoBarra()) {
+      const id = ca.dataset.carta;
+      if (enCarta(id)) estado.ocultas[id] = true; else delete estado.ocultas[id];
+      guardarEstado();
+      renderRecetas();
+      return;
+    }
     const fo = ev.target.closest("[data-foto]");
     if (fo && !esModoBarra()) { fotoObjetivo = fo.dataset.foto; $("#input-foto").click(); return; }
     const fq = ev.target.closest("[data-foto-quitar]");

@@ -822,3 +822,7 @@ tr:last-child td { border-bottom: none; }
 /* El PIN se enmascara con CSS (el campo no es type=password para que el
    gestor de contraseñas del móvil no lo rellene automáticamente) */
 #input-pin { -webkit-text-security: disc; }
+
+/* Recetas fuera de carta (solo las ve el máster, atenuadas) */
+.receta-card.fuera-carta { opacity: .58; }
+.receta-card.fuera-carta:hover { opacity: 1; }
