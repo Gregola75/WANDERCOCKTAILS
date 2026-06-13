@@ -486,7 +486,10 @@ function renderInventario() {
           <td class="num">${fmtDinero(item.precio)} ${ivaBadge}</td>
           <td class="num">${item.cantidad} ${item.unidad}</td>
           <td class="num" title="Coste real sin IVA (deducible)">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
-          <td><button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button></td>
+          <td>
+            <button class="btn btn-sec btn-mini" data-editar-inv="${item.id}">Editar</button>
+            <button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button>
+          </td>
         </tr>`;
       }).join("");
       return `
@@ -502,8 +505,12 @@ function renderInventario() {
   cont.querySelectorAll("[data-borrar-inv]").forEach(b => {
     b.addEventListener("click", () => {
       estado.inventario = estado.inventario.filter(i => i.id !== b.dataset.borrarInv);
+      if (invEditandoId === b.dataset.borrarInv) cancelarEdicionInventario();
       guardarEstado(); renderInventario();
     });
+  });
+  cont.querySelectorAll("[data-editar-inv]").forEach(b => {
+    b.addEventListener("click", () => cargarInventarioEnForm(b.dataset.editarInv));
   });
 
   const tipos = tiposEnInventario();
@@ -512,6 +519,36 @@ function renderInventario() {
     <div class="kpi"><b>${estado.inventario.length}</b> productos en inventario</div>
     <div class="kpi"><b>${tipos.size}</b> tipos de ingrediente cubiertos</div>
     <div class="kpi"><b>${posibles}</b> recetas posibles ahora mismo</div>`;
+}
+
+let invEditandoId = null; // id del producto que se está editando (o null para alta)
+
+function cargarInventarioEnForm(id) {
+  const item = estado.inventario.find(i => i.id === id);
+  if (!item) return;
+  const t = tipoPorId(item.tipo);
+  invEditandoId = id;
+  $("#inv-nombre").value = item.nombre;
+  if (t) {
+    $("#inv-cat").value = t.cat;
+    $("#inv-tipo").innerHTML = opcionesTiposHtml(t.cat);
+  }
+  $("#inv-tipo").value = item.tipo;
+  $("#inv-precio").value = item.precio;
+  $("#inv-iva-modo").value = item.precioConIva ? "incluido" : "neto";
+  $("#inv-iva").value = item.iva != null ? item.iva : (estado.ivaCompra ?? 21);
+  $("#inv-cantidad").value = item.cantidad;
+  $("#inv-unidad").value = item.unidad;
+  $("#btn-inv-submit").textContent = "Guardar cambios";
+  $("#btn-inv-cancelar").style.display = "";
+  $("#form-inventario").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function cancelarEdicionInventario() {
+  invEditandoId = null;
+  $("#form-inventario").reset();
+  $("#btn-inv-submit").textContent = "+ Añadir";
+  $("#btn-inv-cancelar").style.display = "none";
 }
 
 function agregarInventario(ev) {
@@ -524,9 +561,15 @@ function agregarInventario(ev) {
   const iva = parseFloat($("#inv-iva").value);
   const precioConIva = $("#inv-iva-modo").value === "incluido";
   if (!nombre || !tipo || !(precio >= 0) || !(cantidad > 0)) return;
-  estado.inventario.push({ id: "inv-" + Date.now(), nombre, tipo, precio, cantidad, unidad, iva, precioConIva });
+  if (invEditandoId) {
+    const item = estado.inventario.find(i => i.id === invEditandoId);
+    if (item) Object.assign(item, { nombre, tipo, precio, cantidad, unidad, iva, precioConIva });
+    cancelarEdicionInventario();
+  } else {
+    estado.inventario.push({ id: "inv-" + Date.now(), nombre, tipo, precio, cantidad, unidad, iva, precioConIva });
+    $("#form-inventario").reset();
+  }
   guardarEstado();
-  $("#form-inventario").reset();
   renderInventario();
 }
 
@@ -1733,6 +1776,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $$("#menu-lateral [data-sec]").forEach(b =>
     b.addEventListener("click", () => cambiarSeccion(b.dataset.sec, b.dataset.sub)));
   $("#form-inventario").addEventListener("submit", agregarInventario);
+  $("#btn-inv-cancelar").addEventListener("click", cancelarEdicionInventario);
   $("#form-receta").addEventListener("submit", guardarRecetaNueva);
   $("#btn-add-ing").addEventListener("click", () => {
     $("#nr-ingredientes").insertAdjacentHTML("beforeend", filaIngredienteHtml());
