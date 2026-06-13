@@ -156,6 +156,39 @@
       </div>
     </form>
 
+    <div class="fila" style="margin:4px 0 14px">
+      <button type="button" class="btn btn-sec btn-mini" id="btn-nt-abrir">➕ Crear tipo de ingrediente (sirope especial, puré casero…)</button>
+    </div>
+
+    <div class="form-receta" id="caja-tipo-nuevo" style="display:none">
+      <h3 style="margin-top:0">Nuevo tipo de ingrediente</h3>
+      <p class="sub">¿Tienes algo que no está en la lista (sirope de caramelo salado, de gominola, picante, un puré casero…)? Créalo aquí y lo podrás elegir al añadir productos y usarlo en recetas.</p>
+      <div class="fila">
+        <div class="campo">
+          <label>Nombre</label>
+          <input type="text" id="nt-nombre" placeholder="Ej: Sirope de caramelo salado" style="width:230px">
+        </div>
+        <div class="campo">
+          <label>Categoría</label>
+          <select id="nt-cat"></select>
+        </div>
+        <div class="campo">
+          <label>Subcategoría (opcional)</label>
+          <input type="text" id="nt-sub" placeholder="Ej: Siropes especiales" style="width:170px">
+        </div>
+        <div class="campo">
+          <label>¿Qué aporta al cóctel?</label>
+          <select id="nt-rol"></select>
+        </div>
+        <div class="campo">
+          <label>&nbsp;</label>
+          <button type="button" class="btn" id="btn-nt-crear">Crear tipo</button>
+        </div>
+      </div>
+      <p class="entrada-error" id="nt-aviso" style="text-align:left"></p>
+      <div id="lista-tipos-propios"></div>
+    </div>
+
     <div class="chips" id="inv-chips"></div>
     <div id="inv-lista"></div>
   </section>

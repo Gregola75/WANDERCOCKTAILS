@@ -27,6 +27,7 @@ let estado = {
   modo: "master",       // "master" (dueño: edita todo) | "barra" (bartender: solo guía)
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
   ocultas: {},          // { recetaId: true } -> recetas que el bartender NO ve (fuera de carta)
+  tiposPropios: [],     // tipos de ingrediente creados por el negocio (siropes especiales, etc.)
   rev: 0,               // revisión de los datos (para la sincronización en la nube)
   nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
   equipo: [],           // [{id, nombre, pin, rol: "bartender"|"master"}] -> tu gente
@@ -48,6 +49,7 @@ function cargarEstado() {
   if (!estado.misVasos) estado.misVasos = [];
   if (!estado.fotos) estado.fotos = {};
   if (!estado.ocultas) estado.ocultas = {};
+  if (!estado.tiposPropios) estado.tiposPropios = [];
   // migración: el equipo antiguo eran correos (texto); ahora son personas
   estado.equipo = (estado.equipo || []).filter(m => m && typeof m === "object" && m.nombre);
   delete estado.vasos;
@@ -69,7 +71,10 @@ const $$ = sel => Array.from(document.querySelectorAll(sel));
 const vasoPorId = id => VASOS.find(v => v.id === id);
 const hieloPorId = id => HIELOS.find(h => h.id === id);
 const tecnicaPorId = id => TECNICAS.find(t => t.id === id);
-const tipoPorId = id => TIPOS_INGREDIENTE.find(t => t.id === id);
+const todosTipos = () => TIPOS_INGREDIENTE.concat(estado.tiposPropios || []);
+const tipoPorId = id => todosTipos().find(t => t.id === id);
+// Perfil de sabor de un tipo (incluye los tipos propios, con su perfil derivado del rol)
+const perfilTipo = id => PERFIL_TIPO[id] || (tipoPorId(id) || {}).perfil || {};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function fmtMl(ml) {
@@ -101,7 +106,7 @@ function recetaPorId(id) {
 // Densidad aproximada de un ingrediente (para el orden de capas):
 // el azúcar la sube, el alcohol la baja. Más denso = se vierte primero.
 function densidadTipo(tipoId) {
-  const p = PERFIL_TIPO[tipoId] || {};
+  const p = perfilTipo(tipoId);
   return 1 + (p.azucar || 0) * 0.4 - (p.abv || 0) * 0.21;
 }
 
@@ -261,7 +266,7 @@ function cambiarSeccion(id, sub) {
 
   $$(".seccion").forEach(s => s.classList.toggle("activa", s.id === "sec-" + id));
   if (id === "barra") renderBarra();
-  if (id === "inventario") renderInventario();
+  if (id === "inventario") { renderInventario(); rellenarSelectsTipoNuevo(); renderTiposPropios(); }
   if (id === "recetas") renderRecetas();
   if (id === "crear") renderCrear();
   if (id === "inventar") renderInventar();
@@ -284,7 +289,11 @@ function cerrarMenu() {
 // Opciones <select> de tipos agrupadas por categoría · subcategoría
 // (con el origen del destilado entre paréntesis, para formar al personal)
 function opcionesTiposHtml(soloCat) {
-  const tipos = TIPOS_INGREDIENTE.filter(t => !soloCat || t.cat === soloCat);
+  // Tipos del catálogo + los propios del negocio, ordenados por cat·sub
+  const tipos = todosTipos()
+    .filter(t => !soloCat || t.cat === soloCat)
+    .slice()
+    .sort((a, b) => (a.cat + a.sub).localeCompare(b.cat + b.sub));
   let grupo = "", html = "";
   tipos.forEach(t => {
     const origen = SUB_ORIGEN[t.sub] ? ` — ${SUB_ORIGEN[t.sub]}` : "";
@@ -294,7 +303,7 @@ function opcionesTiposHtml(soloCat) {
       html += `<optgroup label="${esc(g)}">`;
       grupo = g;
     }
-    html += `<option value="${t.id}">${esc(t.nombre)}</option>`;
+    html += `<option value="${t.id}">${esc(t.nombre)}${t.propio ? " ★" : ""}</option>`;
   });
   return html + (grupo ? "</optgroup>" : "");
 }
@@ -555,8 +564,85 @@ function cancelarEdicionInventario() {
   $("#btn-inv-cancelar").style.display = "none";
 }
 
-function agregarInventario(ev) {
-  ev.preventDefault();
+// ---------- Tipos de ingrediente propios del negocio ----------
+// Perfil de sabor por defecto según el rol elegido, para que el indicador
+// de sabor y el control frozen funcionen también con los tipos creados.
+const PERFIL_POR_ROL = {
+  "base":        { abv: .40 },
+  "licor-dulce": { abv: .20, azucar: .30 },
+  "vermut":      { abv: .15, azucar: .14 },
+  "aperitivo":   { abv: .15, azucar: .20, amargo: true },
+  "espumoso":    { abv: .11, azucar: .01, gas: true },
+  "dulce":       { azucar: .60 },
+  "acido":       { acido: .055, azucar: .02, turbio: true },
+  "zumo":        { acido: .010, azucar: .10, turbio: true },
+  "pure":        { acido: .010, azucar: .25, turbio: true },
+  "textura":     { azucar: .05, turbio: true, cremoso: true },
+  "alargador":   { azucar: .08, gas: true },
+  "bitter":      { abv: .44, amargo: true },
+  "aroma":       {},
+};
+
+function rellenarSelectsTipoNuevo() {
+  const selCat = $("#nt-cat");
+  if (selCat && !selCat.options.length) {
+    selCat.innerHTML = CATEGORIAS.map(c => `<option value="${c.id}">${c.emoji} ${esc(c.id)}</option>`).join("");
+  }
+  const selRol = $("#nt-rol");
+  if (selRol && !selRol.options.length) {
+    selRol.innerHTML = Object.entries(ROLES).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join("");
+    selRol.value = "dulce"; // lo más habitual (siropes especiales)
+  }
+}
+
+function renderTiposPropios() {
+  const cont = $("#lista-tipos-propios");
+  if (!cont) return;
+  cont.innerHTML = (estado.tiposPropios || []).length
+    ? estado.tiposPropios.map(t => `
+      <div class="ing-linea">
+        <span>★ <b>${esc(t.nombre)}</b> · ${esc(t.cat)} › ${esc(t.sub)} · ${esc(ROLES[t.rol] || t.rol)}</span>
+        <button class="btn btn-peligro btn-mini" data-tp-quitar="${t.id}">Quitar</button>
+      </div>`).join("")
+    : `<p class="vacio">Aún no has creado tipos propios. Útil para tus siropes especiales (caramelo salado, gominola, picante…), purés caseros, infusiones…</p>`;
+  cont.querySelectorAll("[data-tp-quitar]").forEach(b => b.addEventListener("click", () => {
+    const t = estado.tiposPropios.find(x => x.id === b.dataset.tpQuitar);
+    const usos = estado.inventario.filter(i => i.tipo === b.dataset.tpQuitar).length;
+    if (!confirm(`¿Quitar el tipo «${t ? t.nombre : ""}»?` + (usos ? `\n\nHay ${usos} producto(s) del inventario que lo usan y quedarán sin tipo.` : ""))) return;
+    estado.tiposPropios = estado.tiposPropios.filter(x => x.id !== b.dataset.tpQuitar);
+    guardarEstado();
+    renderTiposPropios();
+    renderInventario();
+  }));
+}
+
+function crearTipoPropio() {
+  const nombre = $("#nt-nombre").value.trim();
+  const cat = $("#nt-cat").value;
+  const sub = $("#nt-sub").value.trim() || "Especiales del negocio";
+  const rol = $("#nt-rol").value;
+  const aviso = $("#nt-aviso");
+  aviso.textContent = "";
+  if (!nombre) { aviso.textContent = "Ponle un nombre (ej. Sirope de caramelo salado)."; return; }
+  if (todosTipos().some(t => t.nombre.toLowerCase() === nombre.toLowerCase())) {
+    aviso.textContent = "Ya existe un ingrediente con ese nombre.";
+    return;
+  }
+  const id = "tp-" + Date.now();
+  estado.tiposPropios.push({
+    id, nombre, cat, sub, rol, propio: true,
+    perfil: { ...(PERFIL_POR_ROL[rol] || {}) },
+  });
+  guardarEstado();
+  $("#nt-nombre").value = "";
+  $("#nt-sub").value = "";
+  renderTiposPropios();
+  // refrescar selects de tipo del inventario para que aparezca ya
+  $("#inv-tipo").innerHTML = opcionesTiposHtml($("#inv-cat").value || null);
+  aviso.innerHTML = `<span class="ok">✓ «${esc(nombre)}» creado. Ya puedes elegirlo al añadir productos y usarlo en recetas.</span>`;
+}
+
+function agregarInventario(ev) {  ev.preventDefault();
   const nombre = $("#inv-nombre").value.trim();
   const tipo = $("#inv-tipo").value;
   const precio = parseFloat($("#inv-precio").value);
@@ -582,7 +668,7 @@ function agregarInventario(ev) {
 function perfilSabor(escalada) {
   let alcohol = 0, azucar = 0, acido = 0, gas = false, turbio = false, amargo = false, cremoso = false;
   escalada.ingredientes.forEach(i => {
-    const p = PERFIL_TIPO[i.tipo] || {};
+    const p = perfilTipo(i.tipo);
     const ml = i.mlFinal || 0;
     alcohol += ml * (p.abv || 0);
     azucar += ml * (p.azucar || 0);
@@ -702,7 +788,7 @@ function panelFrozen(receta, escalada) {
   if (receta.tecnica !== "batido" && receta.tecnica !== "batido-helado") return "";
   let liquido = 0, alcohol = 0, cuerpo = 0;
   escalada.ingredientes.forEach(i => {
-    const p = PERFIL_TIPO[i.tipo] || {};
+    const p = perfilTipo(i.tipo);
     const ml = i.mlFinal || 0;
     liquido += ml;
     alcohol += ml * (p.abv || 0);
@@ -1805,6 +1891,12 @@ document.addEventListener("DOMContentLoaded", () => {
     b.addEventListener("click", () => cambiarSeccion(b.dataset.sec, b.dataset.sub)));
   $("#form-inventario").addEventListener("submit", agregarInventario);
   $("#btn-inv-cancelar").addEventListener("click", cancelarEdicionInventario);
+  $("#btn-nt-crear").addEventListener("click", crearTipoPropio);
+  $("#btn-nt-abrir").addEventListener("click", () => {
+    const c = $("#caja-tipo-nuevo");
+    c.style.display = c.style.display === "none" ? "" : "none";
+    rellenarSelectsTipoNuevo();
+  });
   $("#form-receta").addEventListener("submit", guardarRecetaNueva);
   $("#btn-add-ing").addEventListener("click", () => {
     $("#nr-ingredientes").insertAdjacentHTML("beforeend", filaIngredienteHtml());
