@@ -18,6 +18,8 @@ let estado = {
   llenadoPct: 90,       // % del vaso que se llena (espacio libre para decorar/transportar)
   margen: 4,            // multiplicador sobre coste para precio sugerido
   moneda: "€",
+  ivaCompra: 21,       // IVA por defecto de las compras (deducible) en %
+  ivaVenta: 10,        // IVA de venta en hostelería (cóctel servido) en %
   inventario: [],       // [{id, nombre, tipo, precio, cantidad, unidad: "ml"|"ud"}]
   recetasPropias: [],   // recetas creadas por el negocio (mismo formato que las clásicas)
   ofertas: [],          // [{id, nombre, recetaId, recetaId2, tipo: "2x1"|"descuento"|"precio"|"combo", valor}]
@@ -74,6 +76,16 @@ function fmtMl(ml) {
 }
 function fmtDinero(n) {
   return n.toFixed(2).replace(".", ",") + " " + estado.moneda;
+}
+// IVA de un producto del inventario (% sobre el precio de compra)
+function ivaDeItem(item) {
+  return item.iva != null ? item.iva : (estado.ivaCompra ?? 21);
+}
+// Coste real (neto, sin IVA): la empresa se deduce el IVA de las compras.
+// Si el precio se introdujo CON IVA incluido, se le quita.
+function precioNetoItem(item) {
+  if (item.precioConIva) return item.precio / (1 + ivaDeItem(item) / 100);
+  return item.precio; // sin IVA, o datos antiguos (se respetan tal cual)
 }
 function todasRecetas() {
   return RECETAS_CLASICAS.concat(RECETAS_SHOTS, estado.recetasPropias);
@@ -174,7 +186,7 @@ function costePorTipo() {
   const mapa = {};
   estado.inventario.forEach(item => {
     if (!item.precio || !item.cantidad) return;
-    const cu = item.precio / item.cantidad; // €/ml o €/ud
+    const cu = precioNetoItem(item) / item.cantidad; // €/ml o €/ud (neto, sin IVA)
     if (mapa[item.tipo] == null || cu < mapa[item.tipo].cu) {
       mapa[item.tipo] = { cu, unidad: item.unidad, nombre: item.nombre };
     }
@@ -193,7 +205,7 @@ function costeReceta(escalada) {
     if (i.marca) {
       const item = estado.inventario.find(x => x.id === i.marca);
       if (item && item.precio && item.cantidad) {
-        c = { cu: item.precio / item.cantidad, unidad: item.unidad, nombre: item.nombre };
+        c = { cu: precioNetoItem(item) / item.cantidad, unidad: item.unidad, nombre: item.nombre };
       }
     }
     if (!c) { faltantes.push(i.nombreTipo); return; }
@@ -464,13 +476,16 @@ function renderInventario() {
       const valor = items.reduce((s, i) => s + (i.precio || 0), 0);
       const filas = items.map(item => {
         const t = tipoPorId(item.tipo);
-        const cu = item.precio && item.cantidad ? item.precio / item.cantidad : 0;
+        const cu = item.precio && item.cantidad ? precioNetoItem(item) / item.cantidad : 0;
+        const ivaBadge = item.precioConIva
+          ? `<span class="tag" title="Precio con IVA; el coste se calcula sin IVA">IVA ${ivaDeItem(item)}% incl.</span>`
+          : `<span class="tag">sin IVA</span>`;
         return `<tr>
           <td><b>${esc(item.nombre)}</b></td>
           <td><span class="tag" ${SUB_ORIGEN[t.sub] ? `title="Origen: ${esc(SUB_ORIGEN[t.sub])}"` : ""}>${esc(t.sub)}${SUB_ORIGEN[t.sub] ? ` · ${esc(SUB_ORIGEN[t.sub])}` : ""}</span> <span class="tag tag-oro">${esc(t.nombre)}</span></td>
-          <td class="num">${fmtDinero(item.precio)}</td>
+          <td class="num">${fmtDinero(item.precio)} ${ivaBadge}</td>
           <td class="num">${item.cantidad} ${item.unidad}</td>
-          <td class="num">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
+          <td class="num" title="Coste real sin IVA (deducible)">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
           <td><button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button></td>
         </tr>`;
       }).join("");
@@ -506,8 +521,10 @@ function agregarInventario(ev) {
   const precio = parseFloat($("#inv-precio").value);
   const cantidad = parseFloat($("#inv-cantidad").value);
   const unidad = $("#inv-unidad").value;
+  const iva = parseFloat($("#inv-iva").value);
+  const precioConIva = $("#inv-iva-modo").value === "incluido";
   if (!nombre || !tipo || !(precio >= 0) || !(cantidad > 0)) return;
-  estado.inventario.push({ id: "inv-" + Date.now(), nombre, tipo, precio, cantidad, unidad });
+  estado.inventario.push({ id: "inv-" + Date.now(), nombre, tipo, precio, cantidad, unidad, iva, precioConIva });
   guardarEstado();
   $("#form-inventario").reset();
   renderInventario();
@@ -692,9 +709,11 @@ function tarjetaReceta(receta, opciones = {}) {
     capasHtml = `<p class="meta">🌈 Orden de vertido (por densidad): ${orden.join(" → ")}</p>`;
   }
 
-  const precioSugerido = c.total * estado.margen;
+  const pvpNeto = c.total * estado.margen;                       // PVP base, sin IVA
+  const ivaVenta = estado.ivaVenta ?? 10;
+  const pvpCarta = pvpNeto * (1 + ivaVenta / 100);               // lo que paga el cliente
   const costeHtml = barra ? "" : c.completo
-    ? `<div class="coste">${fmtDinero(c.total)}</div>`
+    ? `<div class="coste" title="Coste real sin IVA (deducible)">${fmtDinero(c.total)}</div>`
     : `<div class="coste" title="Faltan precios de: ${esc(c.faltantes.join(", "))}">${c.total > 0 ? "≥ " + fmtDinero(c.total) : "—"}</div>`;
 
   const avisos = e.avisos.map(a => `<div class="aviso">${esc(a)}</div>`).join("");
@@ -730,8 +749,8 @@ function tarjetaReceta(receta, opciones = {}) {
       <p class="meta">
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
         ${e.despPct ? `+ hielo (vaso lleno al ${estado.llenadoPct} %)` : `(${estado.llenadoPct} % del vaso)`}
-        ${!barra && c.completo ? ` · Precio sugerido (coste × ${estado.margen}): <b>${fmtDinero(precioSugerido)}</b> · Coste = ${precioSugerido > 0 ? Math.round(c.total / precioSugerido * 100) : 0}% del PVP` : ""}
       </p>
+      ${!barra && c.completo ? `<p class="meta">💶 Coste <b>${fmtDinero(c.total)}</b> (sin IVA) · PVP carta <b>${fmtDinero(pvpCarta)}</b> (IVA ${ivaVenta}% incl.) · Base ${fmtDinero(pvpNeto)} · Food cost ${pvpNeto > 0 ? Math.round(c.total / pvpNeto * 100) : 0}%</p>` : ""}
       ${receta.decoracion ? `<p class="meta">🍋 ${esc(receta.decoracion)}</p>` : ""}
       ${receta.pasos ? `<p class="pasos">${esc(receta.pasos)}</p>` : ""}
       <div>${dispTag}</div>
@@ -1625,6 +1644,8 @@ function renderAjustes() {
   $("#aj-llenado").value = estado.llenadoPct;
   $("#aj-margen").value = estado.margen;
   $("#aj-moneda").value = estado.moneda;
+  $("#aj-iva-venta").value = estado.ivaVenta ?? 10;
+  $("#aj-iva-compra").value = estado.ivaCompra ?? 21;
   $("#aj-diluciones").innerHTML = TECNICAS.map(t => `
     <div class="fila" style="margin-bottom:8px">
       <label style="min-width:200px">${esc(t.nombre)}</label>
@@ -1650,6 +1671,10 @@ function guardarAjustes(ev) {
   const moneda = $("#aj-moneda").value.trim();
   if (moneda) estado.moneda = moneda;
   if (margen > 0) estado.margen = margen;
+  const ivaV = parseFloat($("#aj-iva-venta").value);
+  const ivaC = parseFloat($("#aj-iva-compra").value);
+  if (ivaV >= 0 && ivaV <= 30) estado.ivaVenta = ivaV;
+  if (ivaC >= 0 && ivaC <= 30) estado.ivaCompra = ivaC;
   const pin = $("#aj-pin").value.trim();
   if (pin) {
     if (pin.length < 4) { alert("El PIN necesita al menos 4 caracteres."); return; }
