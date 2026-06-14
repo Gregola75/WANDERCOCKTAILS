@@ -26,6 +26,7 @@ const VASOS = [
   { id: "flauta",      nombre: "Copa Flauta",               ml: 170, rango: [150, 200], desc: "Copa alargada. Espumosos y cócteles con cava." },
   { id: "vino",        nombre: "Copa de Vino",              ml: 350, rango: [300, 450], desc: "Copa de vino estándar. Spritz y cócteles de vino." },
   { id: "shot",        nombre: "Vaso Shot / Caballito",     ml: 50,  rango: [30, 70],   desc: "Vaso pequeño para chupitos y shooters." },
+  { id: "sidra",       nombre: "Vaso de Sidra",             ml: 380, rango: [300, 500], desc: "Vaso ancho de cristal fino. Sidra escanciada y combinados largos." },
 ];
 
 // ---------- Siluetas de los vasos (línea dorada, sin imágenes externas) ----------
@@ -49,6 +50,7 @@ const VASO_SVG = {
   "flauta":      _svg('<path d="M25 8c0 26 1 36 7 36s7-10 7-36Z"/><path d="M32 44v32"/><path d="M18 84h28"/>'),
   "vino":        _svg('<path d="M17 10c0 18 5 26 15 26s15-8 15-26Z"/><path d="M32 36v40"/><path d="M16 84h32"/>'),
   "shot":        _svg('<path d="M22 50h20l-2 34H24Z"/><path d="M25 62h14" opacity=".35"/>'),
+  "sidra":       _svg('<path d="M16 14h32l-3 70H19Z"/><path d="M20 34h24" opacity=".35"/>'),
 };
 
 // ---------- Tipos de hielo ----------
