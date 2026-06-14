@@ -126,6 +126,10 @@ const TIPOS_INGREDIENTE = [
   { id: "campari",         nombre: "Campari (bitter rojo)",  cat: "Licores", sub: "Aperitivos amargos", rol: "aperitivo" },
   { id: "aperol",          nombre: "Aperol",                 cat: "Licores", sub: "Aperitivos amargos", rol: "aperitivo" },
   { id: "cava-prosecco",   nombre: "Cava / Prosecco",        cat: "Licores", sub: "Espumosos",          rol: "espumoso" },
+  { id: "vino-tinto",      nombre: "Vino tinto",             cat: "Licores", sub: "Vinos",               rol: "base" },
+  { id: "vino-blanco",     nombre: "Vino blanco",            cat: "Licores", sub: "Vinos",               rol: "base" },
+  { id: "vino-rosado",     nombre: "Vino rosado",            cat: "Licores", sub: "Vinos",               rol: "base" },
+  { id: "vino-dulce",      nombre: "Vino dulce (moscatel, oporto)", cat: "Licores", sub: "Vinos",        rol: "licor-dulce" },
   // Siropes
   { id: "sirope-simple",   nombre: "Sirope simple (azúcar)", cat: "Siropes", sub: "Básicos",    rol: "dulce" },
   { id: "sirope-agave",    nombre: "Sirope de agave",        cat: "Siropes", sub: "Básicos",    rol: "dulce" },
@@ -696,6 +700,8 @@ const PERFIL_TIPO = {
   "vermut-rojo": { abv: .15, azucar: .15 }, "vermut-seco": { abv: .15, azucar: .03 },
   "campari": { abv: .25, azucar: .20, amargo: true }, "aperol": { abv: .11, azucar: .24, amargo: true },
   "cava-prosecco": { abv: .11, azucar: .01, gas: true },
+  "vino-tinto": { abv: .13, acido: .005 }, "vino-blanco": { abv: .12, acido: .006 },
+  "vino-rosado": { abv: .12, acido: .005, azucar: .01 }, "vino-dulce": { abv: .15, azucar: .12 },
   // Siropes
   "sirope-simple": { azucar: .62 }, "sirope-agave": { azucar: .68 },
   "miel": { azucar: .70, turbio: true }, "granadina": { azucar: .55 },
