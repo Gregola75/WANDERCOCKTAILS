@@ -317,15 +317,20 @@ function renderBarra() {
   contM.innerHTML = estado.misVasos.length
     ? estado.misVasos.map(mv => {
       const t = vasoPorId(mv.tipo);
+      const fv = estado.fotos["vaso:" + mv.tipo];
       return `
         <div class="card vaso-card sel">
-          <div class="vaso-icono">${VASO_SVG[mv.tipo] || ""}</div>
+          <div class="vaso-icono">${fv ? `<img src="${fv}" alt="${esc(t.nombre)}" class="vaso-foto">` : (VASO_SVG[mv.tipo] || "")}</div>
           <div class="vaso-info">
             <h4>${esc(t.nombre)}</h4>
             <div class="fila">
               <input type="number" min="10" max="2000" step="5" value="${mv.ml}" data-mv-ml="${mv.id}">
               <span>ml</span>
               <button class="btn btn-peligro btn-mini" data-mv-quitar="${mv.id}">Quitar</button>
+            </div>
+            <div class="fila" style="margin-top:6px">
+              <button class="btn btn-sec btn-mini" data-foto="vaso:${mv.tipo}">📷 ${fv ? "Cambiar foto" : "Foto del vaso"}</button>
+              ${fv ? `<button class="btn btn-peligro btn-mini" data-foto-quitar="vaso:${mv.tipo}">✕ Foto</button>` : ""}
             </div>
             <p class="rango aviso-rango" data-aviso-mv="${mv.id}"></p>
           </div>
@@ -362,9 +367,10 @@ function renderBarra() {
   const contV = $("#lista-vasos");
   contV.innerHTML = VASOS.map(v => {
     const enUso = estado.misVasos.filter(x => x.tipo === v.id).length;
+    const fv = estado.fotos["vaso:" + v.id];
     return `
       <div class="card vaso-card">
-        <div class="vaso-icono">${VASO_SVG[v.id] || ""}</div>
+        <div class="vaso-icono">${fv ? `<img src="${fv}" alt="${esc(v.nombre)}" class="vaso-foto">` : (VASO_SVG[v.id] || "")}</div>
         <div class="vaso-info">
           <h4>${esc(v.nombre)} ${enUso ? `<span class="tag tag-oro">en uso ×${enUso}</span>` : ""}</h4>
           <p class="desc">${esc(v.desc)}</p>

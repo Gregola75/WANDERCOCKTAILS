@@ -610,6 +610,7 @@ tr:last-child td { border-bottom: none; }
   filter: drop-shadow(0 4px 10px rgba(217, 164, 65, .25));
 }
 .vaso-icono svg { width: 48px; height: 72px; }
+.vaso-foto { width: 56px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--hairline); display: block; }
 .vaso-info { flex: 1; min-width: 0; }
 .vaso-info h4 .tag { vertical-align: 2px; margin-left: 6px; }
 
