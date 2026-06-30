@@ -161,13 +161,17 @@ function escalarReceta(receta) {
   }
 
   const dilucionPct = estado.diluciones[receta.tecnica] ?? tecnicaPorId(receta.tecnica).dilucionPct;
+  const d = dilucionPct / 100;
   const volUtil = capacidad * (estado.llenadoPct / 100) - capacidad * (despPct / 100);
   const hieloMl = capacidad * (despPct / 100);
 
-  // Volumen de la receta de referencia (solo líquidos medibles)
+  // Escalado proporcional: TODO crece igual al cambiar de vaso, manteniendo
+  // las proporciones. El volumen útil del vaso = ingredientes + agua de
+  // dilución (el agua que aporta el hielo al agitar/remover), así que el
+  // licor ya está descontado por esa dilución (no sale cargado de más).
   const liquidosRef = receta.ingredientes.reduce((s, i) =>
     s + (i.ml || 0) + (i.dash ? i.dash * ML_POR_DASH : 0), 0);
-  const factor = volUtil / (liquidosRef * (1 + dilucionPct / 100));
+  const factor = volUtil / (liquidosRef * (1 + d));
 
   const ingredientes = receta.ingredientes.map(i => {
     const t = tipoPorId(i.tipo);
@@ -180,10 +184,14 @@ function escalarReceta(receta) {
     return { ...i, nombreTipo: t.nombre, mlFinal: 0, uds, texto: uds + " ud" };
   });
 
+  // Reparto del volumen: ingredientes medidos + agua de dilución = volumen útil
+  const liquidoIngredientes = liquidosRef * factor; // = volUtil / (1 + d)
+  const aguaDilucion = volUtil - liquidoIngredientes;
+
   return {
     receta, ingredientes, avisos, factor,
     vasoUsado, capacidad, hieloUsado, despPct, hieloMl,
-    dilucionPct, volUtil,
+    dilucionPct, volUtil, aguaDilucion,
     volFinal: volUtil, // ingredientes + dilución = volumen útil por diseño
   };
 }
@@ -912,8 +920,8 @@ function tarjetaReceta(receta, opciones = {}) {
       ${panelSabor(receta, e)}
       ${panelFrozen(receta, e)}
       <p class="meta">
-        Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido
-        ${e.despPct ? `+ hielo (vaso lleno al ${estado.llenadoPct} %)` : `(${estado.llenadoPct} % del vaso)`}
+        Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido${e.despPct ? " + hielo" : ""} en vaso de ${e.capacidad} ml
+        ${e.aguaDilucion >= 3 ? ` · incluye ~${Math.round(e.aguaDilucion)} ml de agua de dilución (al ${esc(tecnicaPorId(receta.tecnica).nombre.split(" ")[0].toLowerCase())})` : ""}
       </p>
       ${!barra && c.completo ? `<p class="meta">💶 Coste <b>${fmtDinero(c.total)}</b> (sin IVA) · PVP carta <b>${fmtDinero(pvpCarta)}</b> (IVA ${ivaVenta}% incl.) · Base ${fmtDinero(pvpNeto)} · Food cost ${pvpNeto > 0 ? Math.round(c.total / pvpNeto * 100) : 0}%</p>` : ""}
       ${receta.decoracion ? `<p class="meta">🍋 ${esc(receta.decoracion)}</p>` : ""}
