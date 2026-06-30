@@ -756,6 +756,27 @@ const NECESITAN_SHAKE = new Set([
   "pure-fresa", "pure-maracuya", "pure-mango",
 ]);
 
+// Método de colado según la regla de oro de barra
+function metodoColado(receta) {
+  const t = receta.tecnica;
+  if (t === "directo") return { txt: "Sin colar: se construye en el vaso", clase: "tag" };
+  if (t === "capas") return { txt: "Sin colar: se vierte por capas sobre cuchara", clase: "tag" };
+  if (t === "batido" || t === "batido-helado") return { txt: "Sin colar: se vierte la mezcla frozen directa", clase: "tag" };
+  // Agitado o removido: ¿simple o doble filtrado?
+  const conTrozos = receta.ingredientes.some(i =>
+    i.tipo === "menta" || i.tipo === "clara-huevo" || /^pure-/.test(i.tipo));
+  const sinHielo = receta.hielo === "sin-hielo"; // servido straight up
+  if (sinHielo) return {
+    txt: "🫗 DOBLE filtrado (colador de gusanillo + malla fina): servido sin hielo, para que no caigan esquirlas y quede limpio y sedoso",
+    clase: "tag-oro",
+  };
+  if (conTrozos) return {
+    txt: "🫗 DOBLE filtrado (gusanillo + malla fina): lleva hierbas/pulpa/clara, la malla retiene los trocitos",
+    clase: "tag-oro",
+  };
+  return { txt: "🫗 Colado SIMPLE (solo colador de gusanillo) sobre hielo nuevo en el vaso", clase: "tag" };
+}
+
 function panelSabor(receta, escalada) {
   const p = perfilSabor(escalada);
   const v = veredictoSabor(p);
@@ -784,6 +805,7 @@ function panelSabor(receta, escalada) {
       ${barraSabor("Acidez", p.acidez, 1.5, "f-acidez", p.acidez.toFixed(2) + " g/100ml")}
       <div><span class="tag ${v.clase}">${v.texto}</span></div>
       <div>${metodoHtml}</div>
+      <div><span class="tag ${metodoColado(receta).clase}">${metodoColado(receta).txt}</span></div>
     </div>`;
 }
 
@@ -963,6 +985,7 @@ function abrirFicha(recetaId) {
           <ul>${listaIngs}</ul>
         </li>
         <li><b>Elabora:</b> ${esc(pasoTecnica)}</li>
+        ${(receta.tecnica === "agitado" || receta.tecnica === "removido") ? `<li><b>Colado:</b> ${esc(metodoColado(receta).txt.replace(/^🫗 /, ""))}.</li>` : ""}
         ${receta.decoracion ? `<li><b>Decora y sirve:</b> ${esc(receta.decoracion)}.</li>` : `<li><b>Sirve</b> inmediatamente.</li>`}
       </ol>
       ${receta.pasos ? `<p class="pasos">📋 Nota del máster: ${esc(receta.pasos)}</p>` : ""}
