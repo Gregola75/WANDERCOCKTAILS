@@ -26,7 +26,7 @@ const nubeConfigActiva = () => estado.nubeConfig || NUBE_CONFIG_DEFECTO;
 const CAMPOS_SYNC = [
   "nombreNegocio", "misVasos", "hielos", "diluciones", "llenadoPct",
   "margen", "moneda", "inventario", "recetasPropias", "ofertas",
-  "pinMaster", "equipo", "ocultas", "tiposPropios", "rev",
+  "pinMaster", "equipo", "ocultas", "tiposPropios", "ivaCompra", "ivaVenta", "rev",
 ];
 
 const nube = {

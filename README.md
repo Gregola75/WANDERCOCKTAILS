@@ -172,6 +172,10 @@ sw.js                  Service worker (funcionamiento offline)
 icons/                 Iconos de la app (generados con tools/gen-icons.mjs)
 ```
 
+## Verificación automática
+
+`node tools/verificar.mjs` ejecuta 600+ comprobaciones sobre el código REAL de la app (extrae las funciones de app.js, no copias): integridad de datos (tipos↔perfiles, vasos↔siluetas, recetas↔referencias), motor de escalado (proporciones exactas, test del agua del hielo, dilución), costes e IVA, reglas de oro (veredicto, método, colado, técnica automática, frozen, orden de capas), y estructura (IDs↔HTML, secciones del menú, funciones de listeners, campos sincronizados, app shell del service worker). Ejecutar tras cada cambio.
+
 ## Modelo de cálculo
 
 | Concepto | Cálculo |

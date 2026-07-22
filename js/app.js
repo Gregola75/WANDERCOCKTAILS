@@ -727,21 +727,27 @@ function etiquetaFuerza(abv) {
 }
 
 // Veredicto de equilibrio según la regla de oro: el dulce se compensa
-// con ácido, amargor o burbuja; si nada lo compensa, avisa.
-function veredictoSabor(p) {
+// con ácido, amargor o burbuja. Contexto: los chupitos concentran el
+// dulzor en un trago corto y el frozen lleva +dulzor a propósito
+// (el frío apaga el sabor), así que sus umbrales son más altos.
+function veredictoSabor(p, ctx = {}) {
+  const maxRatio = ctx.esFrozen ? 18 : 13;
   if (p.acidez >= 0.15) {
     const ratio = p.dulzor / p.acidez;
     if (ratio < 3.5) return { clase: "tag-mal", texto: "⚠ Ácido dominante: sube el dulce o baja el cítrico (busca la 2:1:1)" };
     if (ratio < 6) return { clase: "tag-ok", texto: "✓ Cítrico y fresco: ácido marcado (perfil margarita / daiquiri)" };
-    if (ratio <= 13) return { clase: "tag-ok", texto: "✓ Equilibrado dulce-ácido (cumple la regla de oro)" };
+    if (ratio <= maxRatio) return { clase: "tag-ok", texto: ctx.esFrozen
+      ? "✓ Equilibrado para frozen (el frío pide más dulzor)"
+      : "✓ Equilibrado dulce-ácido (cumple la regla de oro)" };
   }
   // Sin ácido que compense (o con muy poco)
   if (p.dulzor < 1.5) return { clase: "tag-ok", texto: "✓ Seco y espirituoso (estilo martini / ancestral)" };
+  if (ctx.esShot && p.dulzor <= 30) return { clase: "tag-ok", texto: "✓ Chupito goloso: dulzor concentrado en un trago corto" };
   if (p.amargo && p.dulzor <= 12) return { clase: "tag-ok", texto: "✓ Agridulce: el amargor compensa el dulzor (perfil aperitivo)" };
   if (p.cremoso && p.dulzor <= 18) return { clase: "tag-ok", texto: "✓ Cremoso y goloso (perfil tropical / postre)" };
   if (p.gas && p.dulzor <= 11) return { clase: "tag-ok", texto: "✓ Refrescante y dulce (perfil combinado)" };
   if (p.dulzor <= 6) return { clase: "tag-ok", texto: "✓ Semiseco: dulzor sutil sobre la base" };
-  if (p.dulzor <= 11) return { clase: "tag", texto: "Perfil dulce y afrutado: un toque de cítrico lo equilibraría aún más" };
+  if (p.dulzor <= (ctx.esFrozen ? 15 : 11)) return { clase: "tag", texto: "Perfil dulce y afrutado: un toque de cítrico lo equilibraría aún más" };
   return { clase: "tag-mal", texto: "⚠ Muy dulce y sin ácido ni amargor que lo compense" };
 }
 
@@ -803,7 +809,10 @@ function metodoColado(receta) {
 
 function panelSabor(receta, escalada) {
   const p = perfilSabor(escalada);
-  const v = veredictoSabor(p);
+  const v = veredictoSabor(p, {
+    esShot: !!receta.esShot || receta.tecnica === "capas",
+    esFrozen: receta.tecnica === "batido" || receta.tecnica === "batido-helado",
+  });
   const m = metodoRecomendado(p);
   // El batido (con o sin helado) es un agitado con frío dentro: vale si tocaba agitar
   const coincide = receta.tecnica === m.id ||
@@ -819,6 +828,8 @@ function panelSabor(receta, escalada) {
     metodoHtml = `<span class="tag tag-ok">✓ Método correcto: ${esc(tecnicaPorId(receta.tecnica).nombre)} — ${esc(m.razon)}</span>`;
   } else if (construidoValido) {
     metodoHtml = `<span class="tag tag-ok">✓ Construido sobre hielo vale (estilo macerado / combinado); un agitado rápido lo integraría aún más</span>`;
+  } else if (receta.esShot && receta.tecnica === "directo") {
+    metodoHtml = `<span class="tag tag-ok">✓ Chupito directo: se construye en el caballito y listo</span>`;
   } else {
     metodoHtml = `<span class="tag tag-mal">💡 Mejor ${esc(tecnicaPorId(m.id).nombre.toLowerCase())}: ${esc(m.razon)}</span>`;
   }
