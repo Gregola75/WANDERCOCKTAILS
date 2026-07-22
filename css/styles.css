@@ -827,3 +827,39 @@ tr:last-child td { border-bottom: none; }
 /* Recetas fuera de carta (solo las ve el máster, atenuadas) */
 .receta-card.fuera-carta { opacity: .58; }
 .receta-card.fuera-carta:hover { opacity: 1; }
+
+/* ---------- Inventario en tarjetas (responsive, no se corta) ---------- */
+.inv-items { display: flex; flex-direction: column; }
+.inv-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.inv-item:last-child { border-bottom: none; }
+.inv-item-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.inv-item-cab b { font-size: .95rem; }
+.inv-precio {
+  font-family: var(--serif);
+  color: var(--gold-2);
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.inv-item-tags { margin: 6px 0; }
+.inv-item-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.inv-acc { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ---------- Cabecera compacta en móvil ---------- */
+@media (max-width: 560px) {
+  header { padding: 8px 12px; }
+  header h1 { font-size: .82rem; letter-spacing: 1.5px; }
+  .btn-menu { width: 40px; height: 36px; font-size: 1.05rem; }
+  .cabecera-acciones { gap: 6px; }
+  .cabecera-acciones .btn { padding: 7px 10px; font-size: .72rem; }
+  #btn-instalar { display: none !important; } /* se instala desde el menú del navegador */
+}

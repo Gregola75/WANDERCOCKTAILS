@@ -505,27 +505,36 @@ function renderInventario() {
         const t = tipoPorId(item.tipo);
         const cu = item.precio && item.cantidad ? precioNetoItem(item) / item.cantidad : 0;
         const ivaBadge = item.precioConIva
-          ? `<span class="tag" title="Precio con IVA; el coste se calcula sin IVA">IVA ${ivaDeItem(item)}% incl.</span>`
+          ? `<span class="tag" title="Precio con IVA; el coste se calcula sin IVA">IVA ${ivaDeItem(item)}%</span>`
           : `<span class="tag">sin IVA</span>`;
-        return `<tr>
-          <td><b>${esc(item.nombre)}</b></td>
-          <td><span class="tag" ${SUB_ORIGEN[t.sub] ? `title="Origen: ${esc(SUB_ORIGEN[t.sub])}"` : ""}>${esc(t.sub)}${SUB_ORIGEN[t.sub] ? ` · ${esc(SUB_ORIGEN[t.sub])}` : ""}</span> <span class="tag tag-oro">${esc(t.nombre)}</span></td>
-          <td class="num">${fmtDinero(item.precio)} ${ivaBadge}</td>
-          <td class="num">${item.cantidad} ${item.unidad}</td>
-          <td class="num" title="Coste real sin IVA (deducible)">${(cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",")} ${estado.moneda}${item.unidad === "ml" ? "/100ml" : "/ud"}</td>
-          <td>
-            <button class="btn btn-sec btn-mini" data-editar-inv="${item.id}">Editar</button>
-            <button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button>
-          </td>
-        </tr>`;
+        const costeU = (cu * (item.unidad === "ml" ? 100 : 1)).toFixed(2).replace(".", ",") + " " + estado.moneda + (item.unidad === "ml" ? "/100ml" : "/ud");
+        return `
+          <div class="inv-item">
+            <div class="inv-item-cab">
+              <b>${esc(item.nombre)}</b>
+              <span class="inv-precio">${fmtDinero(item.precio)}</span>
+            </div>
+            <div class="inv-item-tags">
+              <span class="tag tag-oro">${esc(t.nombre)}</span>
+              <span class="tag">${esc(t.sub)}</span>
+              ${ivaBadge}
+            </div>
+            <div class="inv-item-pie">
+              <span class="meta">${item.cantidad} ${item.unidad} · coste ${costeU}</span>
+              <span class="inv-acc">
+                <button class="btn btn-sec btn-mini" data-editar-inv="${item.id}">Editar</button>
+                <button class="btn btn-peligro btn-mini" data-borrar-inv="${item.id}">Quitar</button>
+              </span>
+            </div>
+          </div>`;
       }).join("");
       return `
         <div class="cat-bloque">
           <div class="cat-cabecera">
             <span>${c.emoji} <b>${esc(c.id)}</b> · ${items.length} producto${items.length > 1 ? "s" : ""}</span>
-            <span class="meta">${esc(c.desc)} · stock: ${fmtDinero(valor)}</span>
+            <span class="meta">stock: ${fmtDinero(valor)}</span>
           </div>
-          <table><tbody>${filas}</tbody></table>
+          <div class="inv-items">${filas}</div>
         </div>`;
     }).join("") || `<p class="vacio">No hay productos en esta categoría.</p>`;
   }
@@ -1212,6 +1221,7 @@ function renderRecetas() {
 
 // ---------- Personalizar / editar recetas en el formulario ----------
 let recetaEditandoId = null; // si se edita una receta propia, su id
+let tecnicaManual = false;   // ¿el usuario fijó la técnica a mano en «Crear»?
 
 function opcionesMarcaHtml(tipoId, marcaSel) {
   const items = estado.inventario.filter(i => i.tipo === tipoId);
@@ -1236,6 +1246,7 @@ function cargarEnEditor(recetaId) {
   }
   selVaso.value = r.vaso;
   $("#nr-tecnica").value = r.tecnica;
+  tecnicaManual = true;
   const selHielo = $("#nr-hielo");
   if (![...selHielo.options].some(o => o.value === r.hielo)) {
     const h = hieloPorId(r.hielo);
@@ -1295,6 +1306,7 @@ function filaIngredienteHtml() {
 
 function renderCrear() {
   recetaEditandoId = null;
+  tecnicaManual = false;
   $("#aviso-edicion").innerHTML = "";
   const selVaso = $("#nr-vaso");
   const tiposPropios = [...new Set(estado.misVasos.map(v => v.tipo))];
@@ -1337,6 +1349,20 @@ function activarBotonesQuitar() {
       if ($("#nr-ingredientes").children.length > 1) b.closest(".ing-row").remove();
     };
   });
+}
+
+// Detecta la técnica según el contenido (regla de oro): burbuja -> directo,
+// turbio (zumo/puré/huevo/lácteo) -> agitado, solo alcoholes limpios -> removido.
+function detectarTecnica(ingredientes) {
+  let gas = false, turbio = false;
+  ingredientes.forEach(i => {
+    const p = perfilTipo(i.tipo);
+    if (p.gas) gas = true;
+    if (p.turbio) turbio = true;
+  });
+  if (gas) return "directo";
+  if (turbio) return "agitado";
+  return "removido";
 }
 
 function leerIngredientesFormulario() {
@@ -2074,12 +2100,20 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#btn-instalar").style.display = "none";
   });
   $("#btn-preview").addEventListener("click", vistaPrevia);
+  // Auto-detección de técnica: la app elige agitado/removido/directo según
+  // el contenido, salvo que el usuario la fije a mano.
+  $("#nr-tecnica").addEventListener("change", () => { tecnicaManual = true; });
   // Vista previa en vivo: el indicador de sabor se actualiza mientras escribes
   let temporizadorPreview = null;
-  $("#form-receta").addEventListener("input", () => {
+  $("#form-receta").addEventListener("input", ev => {
     clearTimeout(temporizadorPreview);
     temporizadorPreview = setTimeout(() => {
-      if (leerIngredientesFormulario().some(i => i.ml)) vistaPrevia();
+      const ings = leerIngredientesFormulario();
+      if (!tecnicaManual && ings.length) {
+        const sug = detectarTecnica(ings);
+        if (sug && $("#nr-tecnica").value !== sug) $("#nr-tecnica").value = sug;
+      }
+      if (ings.some(i => i.ml)) vistaPrevia();
     }, 400);
   });
   $("#btn-sorprendeme").addEventListener("click", () => mostrarPropuesta("azar"));
