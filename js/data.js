@@ -668,6 +668,50 @@ const RECETAS_SHOTS = [
 
 const ML_POR_DASH = 0.9; // 1 dash ≈ 0,9 ml
 
+// ---------- Catálogo de decoraciones / garnish ----------
+// Ilustraciones a línea dorada (sin imágenes externas). Cada negocio puede
+// sustituir el dibujo por una foto real de su decoración.
+const _dsvg = inner => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const DECORACIONES = [
+  { id: "rodaja-lima",   nombre: "Rodaja de lima",   grupo: "Cítricos", como: "Corta una rueda fina de lima y engánchala en el borde o déjala flotar.",
+    svg: _dsvg('<circle cx="32" cy="32" r="21"/><circle cx="32" cy="32" r="5"/><path d="M32 11v42M11 32h42M17 17l30 30M47 17 17 47"/>') },
+  { id: "rodaja-limon",  nombre: "Rodaja de limón",  grupo: "Cítricos", como: "Rueda fina de limón al borde del vaso.",
+    svg: _dsvg('<circle cx="32" cy="32" r="21"/><circle cx="32" cy="32" r="5"/><path d="M32 11v42M11 32h42M17 17l30 30M47 17 17 47"/>') },
+  { id: "rodaja-naranja",nombre: "Rodaja de naranja",grupo: "Cítricos", como: "Media rueda de naranja pinchada o al borde.",
+    svg: _dsvg('<path d="M11 32a21 21 0 0 1 42 0Z"/><path d="M32 11v21M18 15 32 32M46 15 32 32"/>') },
+  { id: "gajo-lima",     nombre: "Gajo de lima",     grupo: "Cítricos", como: "Cuña de lima para exprimir y decorar.",
+    svg: _dsvg('<path d="M14 46 50 18a24 24 0 0 1-36 28Z"/><path d="M20 40 44 22"/>') },
+  { id: "twist-naranja", nombre: "Twist de naranja", grupo: "Cítricos", como: "Piel de naranja en espiral; exprime los aceites sobre la copa.",
+    svg: _dsvg('<path d="M42 14c-14 0-22 9-22 19s7 17 15 17 12-6 12-12-5-11-11-11-8 4-8 9"/>') },
+  { id: "twist-limon",   nombre: "Twist de limón",   grupo: "Cítricos", como: "Espiral de piel de limón sobre el borde.",
+    svg: _dsvg('<path d="M42 14c-14 0-22 9-22 19s7 17 15 17 12-6 12-12-5-11-11-11-8 4-8 9"/>') },
+  { id: "cereza",        nombre: "Cereza",           grupo: "Frutas",   como: "Cereza al marrasquino, pinchada o al fondo.",
+    svg: _dsvg('<circle cx="26" cy="44" r="10"/><circle cx="43" cy="46" r="8"/><path d="M26 34c1-13 10-18 20-20"/>') },
+  { id: "fresa",         nombre: "Fresa",            grupo: "Frutas",   como: "Fresa entera con corte para el borde, o en láminas.",
+    svg: _dsvg('<path d="M32 54c-11 0-18-8-18-18 0-6 8-8 18-8s18 2 18 8c0 10-7 18-18 18Z"/><path d="M24 24l8-8 8 8"/><path d="M26 36h.01M32 40h.01M38 36h.01M30 46h.01M36 46h.01"/>') },
+  { id: "pina",          nombre: "Trozo de piña",    grupo: "Frutas",   como: "Cuña de piña al borde, sola o con cereza.",
+    svg: _dsvg('<path d="M20 52 44 52 40 26 24 26Z"/><path d="M32 26 24 8M32 26 40 8M32 26v-20"/><path d="M26 36l12 6M26 44l12-6"/>') },
+  { id: "rodaja-pepino", nombre: "Rodaja de pepino", grupo: "Botánicos",como: "Lámina fina de pepino dentro del gin tonic o al borde.",
+    svg: _dsvg('<circle cx="32" cy="32" r="21"/><path d="M28 24h.01M36 26h.01M26 34h.01M34 38h.01M38 32h.01M30 40h.01"/>') },
+  { id: "menta",         nombre: "Ramillete de menta",grupo: "Botánicos",como: "Golpea la menta en la mano y clávala como sombrilla verde.",
+    svg: _dsvg('<path d="M32 54V30"/><path d="M32 32c-11 0-17-6-17-17 11 0 17 6 17 17Z"/><path d="M32 36c11 0 17-6 17-15-11 0-17 6-17 15Z"/>') },
+  { id: "romero",        nombre: "Ramita de romero", grupo: "Botánicos",como: "Rama de romero, se puede flamear ligeramente por el aroma.",
+    svg: _dsvg('<path d="M32 54V12"/><path d="M32 20l8-6M32 20l-8-6M32 30l9-6M32 30l-9-6M32 40l8-6M32 40l-8-6"/>') },
+  { id: "borde-sal",     nombre: "Borde de sal",     grupo: "Bordes",   como: "Humedece el borde con lima y gíralo sobre sal (solo media vuelta).",
+    svg: _dsvg('<path d="M14 22c0 20 4 30 18 30s18-10 18-30"/><ellipse cx="32" cy="22" rx="18" ry="6"/><path d="M18 17h.01M24 14h.01M32 13h.01M40 14h.01M46 17h.01"/>') },
+  { id: "borde-azucar",  nombre: "Borde de azúcar",  grupo: "Bordes",   como: "Igual que la sal pero con azúcar; ideal para cítricos dulces.",
+    svg: _dsvg('<path d="M14 22c0 20 4 30 18 30s18-10 18-30"/><ellipse cx="32" cy="22" rx="18" ry="6"/><path d="M18 17h.01M24 14h.01M32 13h.01M40 14h.01M46 17h.01"/>') },
+  { id: "granos-cafe",   nombre: "Granos de café",   grupo: "Especias", como: "3 granos de café sobre la espuma (espresso martini).",
+    svg: _dsvg('<ellipse cx="24" cy="26" rx="7" ry="10" transform="rotate(-20 24 26)"/><path d="M24 18v16"/><ellipse cx="40" cy="30" rx="7" ry="10" transform="rotate(20 40 30)"/><path d="M40 22v16"/><ellipse cx="32" cy="44" rx="7" ry="10"/><path d="M32 36v16"/>') },
+  { id: "canela",        nombre: "Rama de canela",   grupo: "Especias", como: "Rama de canela, se puede rallar o flamear por encima.",
+    svg: _dsvg('<rect x="27" y="10" width="10" height="44" rx="5"/><path d="M32 12v40"/>') },
+  { id: "anis",          nombre: "Anís estrellado",  grupo: "Especias", como: "Estrella de anís flotando, aroma especiado.",
+    svg: _dsvg('<path d="M32 10l5 10 11 1-8 8 3 11-11-6-11 6 3-11-8-8 11-1Z"/>') },
+  { id: "aceituna",      nombre: "Aceituna",         grupo: "Salados",  como: "1-3 aceitunas en palillo (dry martini).",
+    svg: _dsvg('<ellipse cx="32" cy="34" rx="14" ry="18"/><circle cx="32" cy="30" r="4"/><path d="M46 20 24 46"/>') },
+];
+
+
 // ---------- Origen de cada destilado (formación del personal) ----------
 const SUB_ORIGEN = {
   "Ron":     "caña de azúcar",

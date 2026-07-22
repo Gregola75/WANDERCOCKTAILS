@@ -628,7 +628,7 @@ tr:last-child td { border-bottom: none; }
 .ficha-icono svg { width: 44px; height: 66px; }
 
 /* ---------- Modo barra: solo la guía de recetas ---------- */
-.modo-barra .menu-grupo:not([data-grupo="recetas"]) { display: none; }
+.modo-barra .menu-grupo:not([data-grupo="recetas"]):not([data-grupo="decoraciones"]) { display: none; }
 .modo-barra [data-sec="recetas"][data-sub="propias"] { display: none; }
 
 /* ---------- Fotos de recetas ---------- */
@@ -863,3 +863,6 @@ tr:last-child td { border-bottom: none; }
   .cabecera-acciones .btn { padding: 7px 10px; font-size: .72rem; }
   #btn-instalar { display: none !important; } /* se instala desde el menú del navegador */
 }
+
+/* Ilustración de decoración (más grande que la mini de vaso) */
+.deco-svg svg { width: 60px; height: 60px; color: var(--gold-2); }

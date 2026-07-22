@@ -283,6 +283,7 @@ function cambiarSeccion(id, sub) {
   if (id === "inventario") { renderInventario(); rellenarSelectsTipoNuevo(); renderTiposPropios(); }
   if (id === "recetas") renderRecetas();
   if (id === "crear") renderCrear();
+  if (id === "decoraciones") renderDecoraciones();
   if (id === "inventar") renderInventar();
   if (id === "descubrir") renderDescubrir();
   if (id === "ofertas") renderOfertas();
@@ -1432,6 +1433,39 @@ function vistaPrevia() {
     pasos: $("#nr-pasos").value.trim(),
   };
   $("#vista-previa").innerHTML = tarjetaReceta(recetaTemp);
+}
+
+// ---------- Decoraciones (catálogo de garnish) ----------
+let filtroDeco = "todas";
+
+function renderDecoraciones() {
+  const barra = esModoBarra();
+  const grupos = [...new Set(DECORACIONES.map(d => d.grupo))];
+  $("#deco-chips").innerHTML =
+    `<button class="chip ${filtroDeco === "todas" ? "activo" : ""}" data-fdeco="todas">Todas</button>` +
+    grupos.map(g => `<button class="chip ${filtroDeco === g ? "activo" : ""}" data-fdeco="${esc(g)}">${esc(g)}</button>`).join("");
+  $$("#deco-chips [data-fdeco]").forEach(b => b.addEventListener("click", () => {
+    filtroDeco = b.dataset.fdeco; renderDecoraciones();
+  }));
+
+  const lista = DECORACIONES.filter(d => filtroDeco === "todas" || d.grupo === filtroDeco);
+  $("#lista-decoraciones").innerHTML = lista.map(d => {
+    const foto = estado.fotos["deco:" + d.id];
+    const visual = foto
+      ? `<div class="receta-foto"><img src="${foto}" alt="${esc(d.nombre)}" loading="lazy"></div>`
+      : `<div class="receta-foto placeholder"><span class="ph-vaso deco-svg">${d.svg}</span></div>`;
+    return `
+      <div class="card">
+        ${visual}
+        <h4>${esc(d.nombre)}</h4>
+        <span class="tag tag-oro">${esc(d.grupo)}</span>
+        <p class="desc" style="margin-top:8px">${esc(d.como)}</p>
+        ${!barra ? `<div class="fila">
+          <button class="btn btn-sec btn-mini" data-foto="deco:${d.id}">📷 ${foto ? "Cambiar foto" : "Foto real"}</button>
+          ${foto ? `<button class="btn btn-peligro btn-mini" data-foto-quitar="deco:${d.id}">✕ Foto</button>` : ""}
+        </div>` : ""}
+      </div>`;
+  }).join("");
 }
 
 // ---------- Inventar (asistente con las reglas de oro) ----------
