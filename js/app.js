@@ -162,8 +162,14 @@ function escalarReceta(receta) {
 
   const dilucionPct = estado.diluciones[receta.tecnica] ?? tecnicaPorId(receta.tecnica).dilucionPct;
   const d = dilucionPct / 100;
-  const volUtil = capacidad * (estado.llenadoPct / 100) - capacidad * (despPct / 100);
+  // Volumen útil de líquido:
+  //  · Con hielo: el líquido llena los huecos entre el hielo hasta arriba, así
+  //    que el líquido = capacidad − hielo (coincide con el test del agua).
+  //  · Sin hielo (servido up): se deja algo de aire arriba (% de llenado).
   const hieloMl = capacidad * (despPct / 100);
+  const volUtil = despPct > 0
+    ? capacidad - hieloMl
+    : capacidad * (estado.llenadoPct / 100);
 
   // Escalado proporcional: TODO crece igual al cambiar de vaso, manteniendo
   // las proporciones. El volumen útil del vaso = ingredientes + agua de
