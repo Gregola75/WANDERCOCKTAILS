@@ -688,9 +688,9 @@ const DECORACIONES = [
   { id: "cereza",        nombre: "Cereza",           grupo: "Frutas",   como: "Cereza al marrasquino, pinchada o al fondo.",
     svg: _dsvg('<circle cx="26" cy="44" r="10"/><circle cx="43" cy="46" r="8"/><path d="M26 34c1-13 10-18 20-20"/>') },
   { id: "fresa",         nombre: "Fresa",            grupo: "Frutas",   como: "Fresa entera con corte para el borde, o en láminas.",
-    svg: _dsvg('<path d="M32 54c-11 0-18-8-18-18 0-6 8-8 18-8s18 2 18 8c0 10-7 18-18 18Z"/><path d="M24 24l8-8 8 8"/><path d="M26 36h.01M32 40h.01M38 36h.01M30 46h.01M36 46h.01"/>') },
+    svg: _dsvg('<path d="M17 27c3-3 9-5 15-5s12 2 15 5c0 15-9 31-15 31S17 42 17 27Z"/><path d="M22 22l4-7 6 5 6-5 4 7"/><path d="M26 33h.01M36 33h.01M31 40h.01M25 41h.01M37 41h.01M31 49h.01"/>') },
   { id: "pina",          nombre: "Trozo de piña",    grupo: "Frutas",   como: "Cuña de piña al borde, sola o con cereza.",
-    svg: _dsvg('<path d="M20 52 44 52 40 26 24 26Z"/><path d="M32 26 24 8M32 26 40 8M32 26v-20"/><path d="M26 36l12 6M26 44l12-6"/>') },
+    svg: _dsvg('<path d="M32 24c9 0 15 7 15 18s-6 16-15 16-15-5-15-16 6-18 15-18Z"/><path d="M24 32l16 16M40 32 24 48"/><path d="M32 24c-2-5-1-10 2-14 2 4 2 10-2 14ZM32 24c2-5 1-10-2-14-2 4-2 10 2 14ZM32 24c0-6 3-10 8-11-1 5-3 9-8 11ZM32 24c0-6-3-10-8-11 1 5 3 9 8 11Z"/>') },
   { id: "rodaja-pepino", nombre: "Rodaja de pepino", grupo: "Botánicos",como: "Lámina fina de pepino dentro del gin tonic o al borde.",
     svg: _dsvg('<circle cx="32" cy="32" r="21"/><path d="M28 24h.01M36 26h.01M26 34h.01M34 38h.01M38 32h.01M30 40h.01"/>') },
   { id: "menta",         nombre: "Ramillete de menta",grupo: "Botánicos",como: "Golpea la menta en la mano y clávala como sombrilla verde.",
@@ -698,9 +698,9 @@ const DECORACIONES = [
   { id: "romero",        nombre: "Ramita de romero", grupo: "Botánicos",como: "Rama de romero, se puede flamear ligeramente por el aroma.",
     svg: _dsvg('<path d="M32 54V12"/><path d="M32 20l8-6M32 20l-8-6M32 30l9-6M32 30l-9-6M32 40l8-6M32 40l-8-6"/>') },
   { id: "borde-sal",     nombre: "Borde de sal",     grupo: "Bordes",   como: "Humedece el borde con lima y gíralo sobre sal (solo media vuelta).",
-    svg: _dsvg('<path d="M14 22c0 20 4 30 18 30s18-10 18-30"/><ellipse cx="32" cy="22" rx="18" ry="6"/><path d="M18 17h.01M24 14h.01M32 13h.01M40 14h.01M46 17h.01"/>') },
+    svg: _dsvg('<path d="M12 16h40L32 40Z"/><path d="M32 40v13M20 55h24"/><path d="M12 16h.01M19 16h.01M26 16h.01M33 16h.01M40 16h.01M47 16h.01M52 16h.01"/>') },
   { id: "borde-azucar",  nombre: "Borde de azúcar",  grupo: "Bordes",   como: "Igual que la sal pero con azúcar; ideal para cítricos dulces.",
-    svg: _dsvg('<path d="M14 22c0 20 4 30 18 30s18-10 18-30"/><ellipse cx="32" cy="22" rx="18" ry="6"/><path d="M18 17h.01M24 14h.01M32 13h.01M40 14h.01M46 17h.01"/>') },
+    svg: _dsvg('<path d="M12 16h40L32 40Z"/><path d="M32 40v13M20 55h24"/><path d="M12 16h.01M19 16h.01M26 16h.01M33 16h.01M40 16h.01M47 16h.01M52 16h.01"/>') },
   { id: "granos-cafe",   nombre: "Granos de café",   grupo: "Especias", como: "3 granos de café sobre la espuma (espresso martini).",
     svg: _dsvg('<ellipse cx="24" cy="26" rx="7" ry="10" transform="rotate(-20 24 26)"/><path d="M24 18v16"/><ellipse cx="40" cy="30" rx="7" ry="10" transform="rotate(20 40 30)"/><path d="M40 22v16"/><ellipse cx="32" cy="44" rx="7" ry="10"/><path d="M32 36v16"/>') },
   { id: "canela",        nombre: "Rama de canela",   grupo: "Especias", como: "Rama de canela, se puede rallar o flamear por encima.",
@@ -708,7 +708,7 @@ const DECORACIONES = [
   { id: "anis",          nombre: "Anís estrellado",  grupo: "Especias", como: "Estrella de anís flotando, aroma especiado.",
     svg: _dsvg('<path d="M32 10l5 10 11 1-8 8 3 11-11-6-11 6 3-11-8-8 11-1Z"/>') },
   { id: "aceituna",      nombre: "Aceituna",         grupo: "Salados",  como: "1-3 aceitunas en palillo (dry martini).",
-    svg: _dsvg('<ellipse cx="32" cy="34" rx="14" ry="18"/><circle cx="32" cy="30" r="4"/><path d="M46 20 24 46"/>') },
+    svg: _dsvg('<path d="M46 12 28 38"/><circle cx="46" cy="12" r="2.5"/><ellipse cx="28" cy="42" rx="11" ry="14"/><circle cx="28" cy="42" r="3.5"/>') },
 ];
 
 
