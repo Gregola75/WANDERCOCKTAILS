@@ -66,8 +66,12 @@
     </div>
   </div>
 
-  <div class="menu-grupo" data-grupo="ofertas">
-    <button class="menu-titulo directo" data-sec="ofertas">💰 Promociones</button>
+  <div class="menu-grupo" data-grupo="negocio">
+    <button class="menu-titulo">💰 Negocio <span class="flecha">▾</span></button>
+    <div class="menu-items">
+      <button data-sec="precios">Precios y márgenes</button>
+      <button data-sec="ofertas">Promociones</button>
+    </div>
   </div>
 
   <div class="menu-grupo" data-grupo="ajustes">
@@ -373,6 +377,56 @@
 
     <h3>Mis ofertas activas</h3>
     <div class="grid" id="lista-ofertas"></div>
+  </section>
+
+  <!-- ========== PRECIOS Y MÁRGENES ========== -->
+  <section id="sec-precios" class="seccion">
+    <h2>Precios y márgenes</h2>
+    <p class="sub">Aprende a poner el precio justo: ni regalar tu trabajo ni abusar del cliente. La app hace las cuentas contigo, paso a paso, con TUS números.</p>
+
+    <div class="card" style="margin-bottom:18px">
+      <h4>📚 El método, en 4 pasos</h4>
+      <ol class="reglas">
+        <li><b>Coste del producto:</b> lo que hay dentro del vaso, sin IVA (ej. 60 ml de un ron de 45 €/botella = 3,86 €).</li>
+        <li><b>Gastos fijos por copa:</b> alquiler + sueldos + luz ÷ copas que vendes al mes. Aquí entra lo de tus horas: <b>abriendo 6 h vendes menos copas que un restaurante de jornada completa, así que cada copa debe absorber más gastos</b> — por eso tu precio es (y debe ser) más alto. No es abuso: es tu estructura.</li>
+        <li><b>Multiplicador por gama:</b> lo normal se vende a licor ×4-5; lo premium a ×2,5-3. Parece contradictorio, pero lo que paga facturas son los <b>euros por copa</b>: un premium a ×2,5 deja más dinero que uno barato a ×5.</li>
+        <li><b>Control final (pour cost):</b> el producto debería ser el <b>12-30 %</b> del precio. Menos del 12 % → puede percibirse caro para la zona; más del 40 % → estás regalando.</li>
+      </ol>
+      <p class="desc">Ejemplo real: Ron premium de 45 €/botella, copa de 60 ml a 20 € → producto 3,86 € = 21 % del precio → <b>precio sano de gama premium</b> ✓</p>
+    </div>
+
+    <h3>1️⃣ Tus gastos fijos por copa</h3>
+    <div class="form-receta">
+      <div class="fila">
+        <div class="campo"><label>Gastos fijos al mes (€)</label><input type="number" id="pf-gastos" min="0" step="50" placeholder="3000"></div>
+        <div class="campo"><label>Días abiertos/mes</label><input type="number" id="pf-dias" min="1" max="31" step="1"></div>
+        <div class="campo"><label>Horas de apertura/día</label><input type="number" id="pf-horas" min="1" max="24" step="1"></div>
+        <div class="campo"><label>Copas vendidas/día (media)</label><input type="number" id="pf-copas" min="0" step="5" placeholder="40"></div>
+        <div class="campo"><label>Extras por copa (€: refresco, hielo…)</label><input type="number" id="pf-extras" min="0" step="0.05"></div>
+      </div>
+      <div class="kpis" id="pf-resultado"></div>
+    </div>
+
+    <h3>2️⃣ Tus multiplicadores por gama</h3>
+    <div class="form-receta">
+      <div class="fila">
+        <div class="campo"><label>Económico ×</label><input type="number" id="pm-economico" min="1" step="0.5" style="width:80px"></div>
+        <div class="campo"><label>Estándar ×</label><input type="number" id="pm-estandar" min="1" step="0.5" style="width:80px"></div>
+        <div class="campo"><label>Premium ×</label><input type="number" id="pm-premium" min="1" step="0.5" style="width:80px"></div>
+        <div class="campo"><label>Súper premium ×</label><input type="number" id="pm-lujo" min="1" step="0.5" style="width:80px"></div>
+      </div>
+      <p class="meta">Valores de referencia del sector: 5 · 4 · 3 · 2,5. Ajústalos a tu zona.</p>
+    </div>
+
+    <h3>3️⃣ Calculadora: ¿a cuánto vendo esta copa?</h3>
+    <div class="form-receta">
+      <div class="fila">
+        <div class="campo"><label>Producto (de tu inventario)</label><select id="pc-producto" style="max-width:280px"></select></div>
+        <div class="campo"><label>ml por copa</label><input type="number" id="pc-ml" value="60" min="20" max="120" step="5" style="width:80px"></div>
+        <div class="campo"><label>¿Tu precio en carta? (€ con IVA)</label><input type="number" id="pc-precio" min="0" step="0.5" placeholder="20"></div>
+      </div>
+      <div id="pc-resultado"></div>
+    </div>
   </section>
 
   <!-- ========== AJUSTES ========== -->

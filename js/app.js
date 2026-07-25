@@ -28,6 +28,14 @@ let estado = {
   fotos: {},            // { recetaId: dataURL } -> foto del cóctel servido (comprimida)
   ocultas: {},          // { recetaId: true } -> recetas que el bartender NO ve (fuera de carta)
   tiposPropios: [],     // tipos de ingrediente creados por el negocio (siropes especiales, etc.)
+  finanzas: {           // para calcular el precio justo: gastos fijos y márgenes por gama
+    gastosMes: 0,       // alquiler + sueldos + luz + seguros… al mes (€)
+    diasMes: 24,        // días abiertos al mes
+    horasDia: 6,        // horas de apertura (informativo: menos horas = menos copas)
+    copasDia: 0,        // copas/cócteles vendidos en un día normal
+    extrasCopa: 0.40,   // refresco/hielo/decoración de una copa (€)
+    margenes: { economico: 5, estandar: 4, premium: 3, lujo: 2.5 },
+  },
   rev: 0,               // revisión de los datos (para la sincronización en la nube)
   nubeConfig: null,     // configuración de Firebase pegada por el máster (opcional)
   equipo: [],           // [{id, nombre, pin, rol: "bartender"|"master"}] -> tu gente
@@ -50,6 +58,7 @@ function cargarEstado() {
   if (!estado.fotos) estado.fotos = {};
   if (!estado.ocultas) estado.ocultas = {};
   if (!estado.tiposPropios) estado.tiposPropios = [];
+  if (!estado.finanzas) estado.finanzas = { gastosMes: 0, diasMes: 24, horasDia: 6, copasDia: 0, extrasCopa: 0.40, margenes: { economico: 5, estandar: 4, premium: 3, lujo: 2.5 } };
   // migración: el equipo antiguo eran correos (texto); ahora son personas
   estado.equipo = (estado.equipo || []).filter(m => m && typeof m === "object" && m.nombre);
   delete estado.vasos;
@@ -84,6 +93,16 @@ function fmtMl(ml) {
 function fmtDinero(n) {
   return n.toFixed(2).replace(".", ",") + " " + estado.moneda;
 }
+// Gastos fijos del negocio repartidos entre las copas vendidas:
+// con pocas horas de apertura se venden menos copas y cada una debe
+// absorber más gastos — por eso un bar de 6 h no puede vender a precio
+// de restaurante de 14 h.
+function gastosPorCopa() {
+  const f = estado.finanzas || {};
+  if (!(f.gastosMes > 0) || !(f.diasMes > 0) || !(f.copasDia > 0)) return 0;
+  return f.gastosMes / (f.diasMes * f.copasDia);
+}
+
 // IVA de un producto del inventario (% sobre el precio de compra)
 function ivaDeItem(item) {
   return item.iva != null ? item.iva : (estado.ivaCompra ?? 21);
@@ -287,6 +306,7 @@ function cambiarSeccion(id, sub) {
   if (id === "inventar") renderInventar();
   if (id === "descubrir") renderDescubrir();
   if (id === "ofertas") renderOfertas();
+  if (id === "precios") renderPrecios();
   if (id === "ajustes") renderAjustes();
   cerrarMenu();
   window.scrollTo({ top: 0 });
@@ -950,7 +970,7 @@ function tarjetaReceta(receta, opciones = {}) {
         Volumen servido: <b>${Math.round(e.volFinal)} ml</b> de líquido${e.despPct ? " + hielo" : ""} en vaso de ${e.capacidad} ml
         ${e.aguaDilucion >= 3 ? ` · incluye ~${Math.round(e.aguaDilucion)} ml de agua de dilución (al ${esc(tecnicaPorId(receta.tecnica).nombre.split(" ")[0].toLowerCase())})` : ""}
       </p>
-      ${!barra && c.completo ? `<p class="meta">💶 Coste <b>${fmtDinero(c.total)}</b> (sin IVA) · PVP carta <b>${fmtDinero(pvpCarta)}</b> (IVA ${ivaVenta}% incl.) · Base ${fmtDinero(pvpNeto)} · Food cost ${pvpNeto > 0 ? Math.round(c.total / pvpNeto * 100) : 0}%</p>` : ""}
+      ${!barra && c.completo ? `<p class="meta">💶 Coste <b>${fmtDinero(c.total)}</b> (sin IVA) · PVP carta <b>${fmtDinero(pvpCarta)}</b> (IVA ${ivaVenta}% incl.) · Base ${fmtDinero(pvpNeto)} · Food cost ${pvpNeto > 0 ? Math.round(c.total / pvpNeto * 100) : 0}%${gastosPorCopa() > 0 ? ` · Beneficio neto ≈ <b>${fmtDinero(pvpNeto - c.total - gastosPorCopa())}</b> (tras ${fmtDinero(gastosPorCopa())} de gastos/copa)` : ""}</p>` : ""}
       ${receta.decoracion ? `<p class="meta">🍋 ${esc(receta.decoracion)}</p>` : ""}
       ${receta.pasos ? `<p class="pasos">${esc(receta.pasos)}</p>` : ""}
       <div>${dispTag}</div>
@@ -1870,6 +1890,106 @@ function guardarOferta(ev) {
   renderOfertas();
 }
 
+// ---------- Precios y márgenes (aprender a poner el precio justo) ----------
+function renderPrecios() {
+  const f = estado.finanzas;
+  $("#pf-gastos").value = f.gastosMes || "";
+  $("#pf-dias").value = f.diasMes;
+  $("#pf-horas").value = f.horasDia;
+  $("#pf-copas").value = f.copasDia || "";
+  $("#pf-extras").value = f.extrasCopa;
+  $("#pm-economico").value = f.margenes.economico;
+  $("#pm-estandar").value = f.margenes.estandar;
+  $("#pm-premium").value = f.margenes.premium;
+  $("#pm-lujo").value = f.margenes.lujo;
+  // Productos con precio del inventario
+  const sel = $("#pc-producto");
+  const items = estado.inventario.filter(i => i.precio > 0 && i.cantidad > 0 && i.unidad === "ml");
+  sel.innerHTML = items.length
+    ? items.map(i => `<option value="${i.id}">${esc(i.nombre)} (${fmtDinero(precioNetoItem(i))} · ${i.cantidad} ml)</option>`).join("")
+    : `<option value="">— añade botellas con precio en Inventario —</option>`;
+  actualizarGastosCopa();
+  calcularPrecioCopa();
+}
+
+function leerFinanzas() {
+  const f = estado.finanzas;
+  f.gastosMes = parseFloat($("#pf-gastos").value) || 0;
+  f.diasMes = parseFloat($("#pf-dias").value) || 24;
+  f.horasDia = parseFloat($("#pf-horas").value) || 6;
+  f.copasDia = parseFloat($("#pf-copas").value) || 0;
+  f.extrasCopa = parseFloat($("#pf-extras").value) || 0;
+  f.margenes.economico = parseFloat($("#pm-economico").value) || 5;
+  f.margenes.estandar = parseFloat($("#pm-estandar").value) || 4;
+  f.margenes.premium = parseFloat($("#pm-premium").value) || 3;
+  f.margenes.lujo = parseFloat($("#pm-lujo").value) || 2.5;
+  guardarEstado();
+  actualizarGastosCopa();
+  calcularPrecioCopa();
+}
+
+function actualizarGastosCopa() {
+  const g = gastosPorCopa();
+  const f = estado.finanzas;
+  $("#pf-resultado").innerHTML = g > 0
+    ? `<div class="kpi"><b>${fmtDinero(g)}</b> de gastos fijos por copa</div>
+       <div class="kpi"><b>${f.diasMes * f.copasDia}</b> copas/mes estimadas</div>
+       <p class="meta" style="width:100%">Cada copa que sirves tiene que pagar ${fmtDinero(g)} de alquiler, sueldos y suministros ANTES de darte beneficio. Abriendo ${f.horasDia} h vendes menos copas que un local de jornada completa: por eso tu precio debe ser mayor — no es abusar, es tu estructura real.</p>`
+    : `<p class="meta">Rellena tus gastos mensuales y las copas que vendes al día para saber cuánto debe absorber cada copa.</p>`;
+}
+
+function calcularPrecioCopa() {
+  const cont = $("#pc-resultado");
+  const item = estado.inventario.find(i => i.id === $("#pc-producto").value);
+  if (!item) { cont.innerHTML = ""; return; }
+  const ml = parseFloat($("#pc-ml").value) || 60;
+  const f = estado.finanzas;
+  const iva = 1 + (estado.ivaVenta ?? 10) / 100;
+  const licor = precioNetoItem(item) / item.cantidad * ml;
+  const gastos = gastosPorCopa();
+  const extras = f.extrasCopa || 0;
+  const costeTotal = licor + extras + gastos;
+  const suelo = costeTotal * iva;
+
+  const gamas = [
+    ["Económico", f.margenes.economico], ["Estándar", f.margenes.estandar],
+    ["Premium", f.margenes.premium], ["Súper premium", f.margenes.lujo],
+  ];
+  const filasGamas = gamas.map(([n, m]) =>
+    `<div class="ing-linea"><span>Gama ${n} (licor ×${m})</span><span class="cant">${fmtDinero((licor * m + extras + gastos) * iva)}</span></div>`).join("");
+
+  // Análisis del precio que TÚ quieres poner
+  const tuPrecio = parseFloat($("#pc-precio").value) || 0;
+  let analisis = "";
+  if (tuPrecio > 0) {
+    const base = tuPrecio / iva;
+    const beneficio = base - costeTotal;
+    const pourCost = base > 0 ? (licor + extras) / base * 100 : 0;
+    let tag, texto;
+    if (beneficio <= 0) { tag = "tag-mal"; texto = "⚠ A ese precio PIERDES dinero: no cubre ni el producto ni los gastos"; }
+    else if (pourCost > 40) { tag = "tag-mal"; texto = "⚠ Estás casi regalando la copa (el producto se come el " + Math.round(pourCost) + " % del precio)"; }
+    else if (pourCost > 30) { tag = "tag"; texto = "Margen justo: válido como gancho, pero no para toda la carta"; }
+    else if (pourCost >= 12) { tag = "tag-ok"; texto = "✓ Precio sano: rentable y dentro de mercado"; }
+    else { tag = "tag"; texto = "Precio muy por encima de mercado (el producto es solo el " + Math.round(pourCost) + " %): puede percibirse como abuso salvo en zona/local muy premium"; }
+    analisis = `
+      <h4 style="margin-top:14px">Tu precio: ${fmtDinero(tuPrecio)} (con IVA)</h4>
+      <div class="ing-linea"><span>Base sin IVA</span><span class="cant">${fmtDinero(base)}</span></div>
+      <div class="ing-linea"><span>Beneficio neto por copa (tras TODO)</span><span class="cant">${fmtDinero(beneficio)}</span></div>
+      <div class="ing-linea"><span>Pour cost (producto ÷ precio)</span><span class="cant">${Math.round(pourCost)} %</span></div>
+      <div style="margin-top:6px"><span class="tag ${tag}">${texto}</span></div>`;
+  }
+
+  cont.innerHTML = `
+    <div class="ing-linea"><span>Licor (${ml} ml de ${esc(item.nombre)})</span><span class="cant">${fmtDinero(licor)}</span></div>
+    <div class="ing-linea"><span>Refresco / hielo / decoración</span><span class="cant">${fmtDinero(extras)}</span></div>
+    <div class="ing-linea"><span>Gastos fijos por copa</span><span class="cant">${fmtDinero(gastos)}</span></div>
+    <div class="ing-linea"><span><b>Suelo (cubrir costes, con IVA)</b></span><span class="cant"><b>${fmtDinero(suelo)}</b></span></div>
+    <h4 style="margin-top:14px">Precios sugeridos por gama (con IVA)</h4>
+    ${filasGamas}
+    <p class="meta">La regla del oficio: cuanto más premium, menor multiplicador — porque lo que paga las facturas son los <b>euros</b> por copa, no el porcentaje. Un ron de 64 €/L a ×2,5 te deja más dinero que uno de 12 €/L a ×5.</p>
+    ${analisis}`;
+}
+
 // ---------- Ajustes ----------
 function renderEquipo() {
   const cont = $("#lista-equipo");
@@ -2121,6 +2241,9 @@ document.addEventListener("DOMContentLoaded", () => {
     location.reload();
   });
   $("#form-oferta").addEventListener("submit", guardarOferta);
+  ["pf-gastos","pf-dias","pf-horas","pf-copas","pf-extras","pm-economico","pm-estandar","pm-premium","pm-lujo"]
+    .forEach(id => $("#" + id).addEventListener("input", leerFinanzas));
+  ["pc-producto","pc-ml","pc-precio"].forEach(id => $("#" + id).addEventListener("input", calcularPrecioCopa));
   $("#of-tipo").addEventListener("change", actualizarFormularioOferta);
   aplicarModo();
   mostrarEntrada();
