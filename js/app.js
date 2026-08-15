@@ -692,6 +692,135 @@ function crearTipoPropio() {
   aviso.innerHTML = `<span class="ok">✓ «${esc(nombre)}» creado. Ya puedes elegirlo al añadir productos y usarlo en recetas.</span>`;
 }
 
+// ---------- Importador de productos (CSV de la carta / listas) ----------
+// Entiende el CSV de costes de Wanderlust (Categoría;Tipo;Producto;Estado;
+// Coste compra sin IVA;Botella (ml);…), listas simples «nombre;precio;ml»
+// y el JSON exportado de la propia app.
+function mapearTipoImport(cat, tipo, nombre) {
+  const n = (nombre || "").toLowerCase();
+  const t = (tipo || "").toLowerCase().trim();
+  if (cat === "Licores") {
+    if (t === "ron") {
+      if (/malibu/.test(n)) return "licor-coco";
+      if (/bumbu|especiado/.test(n)) return "ron-especiado";
+      if (/blanco|blanca|havana 3|negrita/.test(n)) return "ron-blanco";
+      return "ron-oscuro";
+    }
+    if (t === "whisky") {
+      if (/rye|centeno/.test(n)) return "whisky-centeno";
+      if (/jack|jim beam|bourbon/.test(n)) return "bourbon";
+      return "whisky-escoces";
+    }
+    if (t === "ginebra") return "ginebra";
+    if (t === "vodka") return "vodka";
+    if (t.startsWith("tequila")) return "tequila";
+    if (t === "mezcal") return "mezcal";
+    if (/licor de cafe|licor de café/.test(n)) return "licor-cafe";
+    if (/amaretto/.test(n)) return "amaretto";
+    if (/bailey/.test(n)) return "crema-irlandesa";
+    if (/hennessy|cognac|coñac|brandy/.test(n)) return "brandy";
+    if (/pisco/.test(n)) return "pisco";
+    return "licor-hierbas"; // jäger, fernet, absenta, licor 43, fireball, aguardientes…
+  }
+  if (/^Vinos/.test(cat)) {
+    if (t === "vermut" || /vermut/.test(n)) return "vermut-rojo";
+    if (/spritz|cinzano/.test(n)) return "aperol";
+    if (/verdejo|blanco|albariño/.test(n)) return "vino-blanco";
+    if (t === "sidra") return null;
+    return "vino-tinto";
+  }
+  if (cat === "Sin Alcohol") {
+    if (/ginger beer/.test(n)) return "ginger-beer";
+    if (/ginger ale/.test(n)) return "ginger-ale";
+    if (/tonica|tónica/.test(n)) return "tonica";
+    if (/pepsi|cola/.test(n)) return "cola";
+    if (/pomelo/.test(n)) return "refresco-pomelo";
+    if (/soda/.test(n)) return "soda";
+    if (/arándano|arandano/.test(n)) return "zumo-arandanos";
+    return null; // aguas, granizados, energéticas… no son ingredientes de coctelería
+  }
+  return null; // Cervezas, Cócteles elaborados, Shishas… no son inventario
+}
+
+function mlPorDefectoImport(cat, tipo, ml) {
+  if (ml > 0) return ml;
+  if (cat === "Sin Alcohol") return 200;    // botellín de refresco
+  if (/^Vinos/.test(cat)) return 750;       // botella de vino
+  return 700;                               // botella estándar de licor
+}
+
+function parsearCsvCarta(texto) {
+  const filas = texto.split(/\r?\n/).filter(l => l.trim());
+  const items = new Map();
+  const omitidos = [];
+  filas.slice(1).forEach(linea => {
+    const c = linea.split(";");
+    if (c.length < 6) return;
+    const [cat, tipo, nombreRaw, estadoP] = [c[0].trim(), c[1], c[2].trim(), c[3].trim()];
+    const precio = parseFloat((c[4] || "").replace(",", "."));
+    const ml = parseFloat((c[5] || "").replace(",", "."));
+    const nombre = nombreRaw.replace(/\s+/g, " ");
+    if (!nombre || items.has(nombre.toLowerCase())) return;
+    if (!(precio > 0)) { omitidos.push(nombre + " (sin coste)"); items.set(nombre.toLowerCase(), null); return; }
+    if (estadoP && estadoP.toLowerCase() !== "activo") { omitidos.push(nombre + " (agotado)"); items.set(nombre.toLowerCase(), null); return; }
+    const tipoId = mapearTipoImport(cat, tipo, nombre);
+    if (!tipoId) { omitidos.push(nombre + " (no es ingrediente de coctelería)"); items.set(nombre.toLowerCase(), null); return; }
+    items.set(nombre.toLowerCase(), {
+      nombre, tipo: tipoId, precio, precioConIva: false,
+      iva: cat === "Sin Alcohol" ? 10 : 21,
+      cantidad: mlPorDefectoImport(cat, tipo, ml), unidad: "ml",
+    });
+  });
+  return { items: [...items.values()].filter(Boolean), omitidos };
+}
+
+function parsearLineasSimples(texto) {
+  // nombre;precio;ml  (una por línea)
+  const items = [];
+  texto.split(/\r?\n/).forEach(l => {
+    const c = l.split(";").map(x => x.trim());
+    const precio = parseFloat((c[1] || "").replace(",", "."));
+    if (c[0] && precio > 0) items.push({
+      nombre: c[0], tipo: "licor-hierbas", precio, precioConIva: false, iva: 21,
+      cantidad: parseFloat(c[2]) > 0 ? parseFloat(c[2]) : 700, unidad: "ml",
+    });
+  });
+  return { items, omitidos: [] };
+}
+
+function importarProductos(texto) {
+  let resultado;
+  try {
+    if (/Coste compra sin IVA/i.test(texto)) resultado = parsearCsvCarta(texto);
+    else if (texto.trim().startsWith("[")) resultado = { items: JSON.parse(texto), omitidos: [] };
+    else resultado = parsearLineasSimples(texto);
+  } catch (e) {
+    $("#import-resumen").innerHTML = `<div class="aviso">No se pudo leer el archivo: ${esc(e.message)}</div>`;
+    return;
+  }
+  const existentes = new Set(estado.inventario.map(i => i.nombre.toLowerCase()));
+  let nuevos = 0, duplicados = 0;
+  resultado.items.forEach(it => {
+    if (!it || !it.nombre || !(it.precio >= 0)) return;
+    if (existentes.has(it.nombre.toLowerCase())) { duplicados++; return; }
+    if (!tipoPorId(it.tipo)) it.tipo = "licor-hierbas";
+    estado.inventario.push({ id: "inv-" + Date.now() + "-" + nuevos, ...it });
+    existentes.add(it.nombre.toLowerCase());
+    nuevos++;
+  });
+  guardarEstado();
+  renderInventario();
+  const om = resultado.omitidos || [];
+  $("#import-resumen").innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><b>${nuevos}</b> productos importados</div>
+      ${duplicados ? `<div class="kpi"><b>${duplicados}</b> ya existían (no se tocaron)</div>` : ""}
+      ${om.length ? `<div class="kpi"><b>${om.length}</b> omitidos</div>` : ""}
+    </div>
+    ${om.length ? `<p class="meta">Omitidos: ${esc(om.join(" · "))}</p>` : ""}
+    <p class="meta">Revisa los tipos asignados (puedes corregir cualquiera con «Editar») y las botellas: se asumió 700 ml en licores salvo que el CSV dijera otra cosa.</p>`;
+}
+
 function agregarInventario(ev) {  ev.preventDefault();
   const nombre = $("#inv-nombre").value.trim();
   const tipo = $("#inv-tipo").value;
@@ -2125,6 +2254,15 @@ document.addEventListener("DOMContentLoaded", () => {
     b.addEventListener("click", () => cambiarSeccion(b.dataset.sec, b.dataset.sub)));
   $("#form-inventario").addEventListener("submit", agregarInventario);
   $("#btn-inv-cancelar").addEventListener("click", cancelarEdicionInventario);
+  $("#btn-importar-csv").addEventListener("click", () => $("#input-import-csv").click());
+  $("#input-import-csv").addEventListener("change", ev => {
+    const archivo = ev.target.files[0];
+    ev.target.value = "";
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => importarProductos(String(lector.result));
+    lector.readAsText(archivo);
+  });
   $("#btn-nt-crear").addEventListener("click", crearTipoPropio);
   $("#btn-nt-abrir").addEventListener("click", () => {
     const c = $("#caja-tipo-nuevo");
